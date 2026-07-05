@@ -1,185 +1,189 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Tab Tracker Pro</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Tracker Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
-        .container { max-width: 450px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { margin-top: 0; color: #333; }
-        
-        /* New Form Styling */
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 4px; }
-        .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-        
-        /* Action Buttons */
-        .btn-row { display: flex; gap: 10px; margin-bottom: 20px; }
-        button { border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        button.add-btn { flex: 2; padding: 12px; background: #0088cc; color: white; }
-        button.add-btn:hover { background: #0077b3; }
-        button.clear-btn { flex: 1; padding: 12px; background: #e63946; color: white; }
-        button.clear-btn:hover { background: #cc333f; }
-
-        /* Display Cards */
-        .person-box { background: #f9f9f9; padding: 12px; margin-bottom: 12px; border-left: 4px solid #0088cc; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
-        .person-box:hover { background: #f1f1f1; }
-        .person-header { margin: 0 0 8px 0; font-size: 16px; color: #333; display: flex; justify-content: space-between; }
-        .settle-text { font-size: 11px; color: #e63946; font-weight: bold; text-transform: uppercase; }
-        .line { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; color: #555; }
-        .total { font-weight: bold; border-top: 1px dashed #ccc; margin-top: 5px; padding-top: 5px; color: #333; }
-        
-        .grand-box { display: flex; justify-content: space-between; font-size: 18px; margin-top: 20px; padding-top: 15px; border-top: 2px solid #333; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #222222);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        h2 {
+            text-align: center;
+            color: var(--tg-theme-button-color, #3390ec);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            background-color: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            color: var(--tg-theme-text-color, #222222);
+            font-size: 16px;
+        }
+        .result-box {
+            background-color: #e8f4fd;
+            border-left: 4px solid #3390ec;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        #statusMessage {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>Add to Tab</h2>
-        
-        <div class="form-group">
-            <label for="input-name">Who is this for?</label>
-            <input type="text" id="input-name" placeholder="e.g., John Doe">
-        </div>
-        <div class="form-group">
-            <label for="input-item">What did they take?</label>
-            <input type="text" id="input-item" placeholder="e.g., Soda">
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex: 1;">
-                <label for="input-price">Price for ONE ($)</label>
-                <input type="number" id="input-price" step="0.01" placeholder="0.00">
-            </div>
-            <div class="form-group" style="flex: 1;">
-                <label for="input-qty">Quantity</label>
-                <input type="number" id="input-qty" value="1" min="1">
-            </div>
-        </div>
-        
-        <div class="btn-row">
-            <button class="add-btn" onclick="handleFormSubmit()">+ Add Item</button>
-            <button class="clear-btn" onclick="clearForm()">Clear Form</button>
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-
-        <h2>Open Tabs</h2>
-        <div id="display-area"></div>
-        
-        <div class="grand-box">
-            <span><strong>Grand Total:</strong></span>
-            <span id="big-total"><strong>$0.00</strong></span>
-        </div>
+<div class="container">
+    <h2>Log Sale / Payment</h2>
+    
+    <div class="form-group">
+        <label for="customerName">Customer Name:</label>
+        <input type="text" id="customerName" placeholder="e.g. John Doe">
     </div>
 
-    <script>
-        var grandTotal = 0;
-        var database = {};
+    <div class="form-group">
+        <label for="totalCost">Total Item Cost ($):</label>
+        <input type="number" id="totalCost" placeholder="0.00" oninput="calculateBalance()">
+    </div>
+
+    <div class="form-group">
+        <label for="amountPaid">Amount Paid Today ($):</label>
+        <input type="number" id="amountPaid" placeholder="0.00" oninput="calculateBalance()">
+    </div>
+
+    <div class="result-box">
+        Remaining Balance Owed: $<span id="remainingBalance">0.00</span>
+    </div>
+
+    <button onclick="submitToSheets()">Submit to Log Book</button>
+    
+    <div id="statusMessage"></div>
+</div>
+
+<script>
+    // Initialize Telegram Web App
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand(); // Expands app to full screen in Telegram
+
+    // Automatically calculate the remaining balance as they type
+    function calculateBalance() {
+        const total = parseFloat(document.getElementById('totalCost').value) || 0;
+        const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+        const balance = total - paid;
         
-        // BACKEND READY: This array keeps a continuous log of every single sale item for your permanent records
-        var salesLog = [];
-        function handleFormSubmit() {
-            // Grab values from form
-            var nameEl = document.getElementById("input-name");
-            var itemEl = document.getElementById("input-item");
-            var priceEl = document.getElementById("input-price");
-            var qtyEl = document.getElementById("input-qty");
+        document.getElementById('remainingBalance').innerText = balance.toFixed(2);
+    }
 
-            var name = nameEl.value.trim();
-            var item = itemEl.value.trim();
-            var numPrice = parseFloat(priceEl.value);
-            var numQty = parseInt(qtyEl.value);
-
-            // Validation
-            if (!name || !item) {
-                alert("Please fill out both Name and Item fields.");
-                return;
-            }
-            if (isNaN(numPrice) || numPrice < 0) {
-                alert("Please enter a valid price.");
-                return;
-            }
-            if (isNaN(numQty) || numQty <= 0) {
-                alert("Please enter a quantity of 1 or more.");
-                return;
-            }
-
-            // Calculate item cost
-            var itemTotalCost = numPrice * numQty;
-
-            // Update Open Tabs Database
-            if (!database[name]) {
-                database[name] = { total: 0, items: [] };
-            }
-
-            var displayItemName = item;
-            if (numQty > 1) {
-                displayItemName = item + " (x" + numQty + ")";
-            }
-
-            database[name].items.push({ itemName: displayItemName, itemPrice: itemTotalCost });
-            database[name].total += itemTotalCost;
-            grandTotal += itemTotalCost;
-
-            // Record to Sales Log for Backend/Tally use
-            var logEntry = {
-                timestamp: new Date().toISOString(),
-                customer: name,
-                item: item,
-                unitPrice: numPrice,
-                quantity: numQty,
-                totalCost: itemTotalCost
-            };
-            salesLog.push(logEntry);
-            
-            // Log to console so you can see it working behind the scenes
-            console.log("Permanent Sales Log Update:", salesLog);
-
-            // UI Refresh & Partial Form reset (keeps name for quick consecutive adding)
-            render();
-            itemEl.value = "";
-            priceEl.value = "";
-            qtyEl.value = "1";
-            itemEl.focus();
+    // Send the data directly to your SheetDB API URL
+    function submitToSheets() {
+        const name = document.getElementById('customerName').value;
+        const total = document.getElementById('totalCost').value;
+        const paid = document.getElementById('amountPaid').value;
+        const balance = document.getElementById('remainingBalance').innerText;
+        const status = document.getElementById('statusMessage');
+        // Simple validation to make sure fields aren't empty
+        if (!name ||!totsl|| !paid) {
+            status.style.color = "red";
+            status.innerText = "Please fill in all fields.";
+            return;
         }
 
-        function clearForm() {
-            document.getElementById("input-name").value = "";
-            document.getElementById("input-item").value = "";
-            document.getElementById("input-price").value = "";
-            document.getElementById("input-qty").value = "1";
-        }
+        status.style.color = "orange";
+        status.innerText = "Sending to log book...";
 
-        function settlePerson(pName) {
-            if (confirm("Clear all items and reset " + pName + "'s tab to $0.00? (This does NOT erase your master sales log history)")) {
-                grandTotal -= database[pName].total;
-                delete database[pName];
-                render();
-            }
-        }
+        // Get today's date and time
+        const today = new Date().toLocaleString();
 
-        function render() {
-            var area = document.getElementById("display-area");
-            area.innerHTML = "";
+        // Put your exact SheetDB API link below inside the quotation marks:
+        const sheetDbUrl = "https://sheetdb.io/api/v1/imabkvc4hn7d3"; 
 
-            for (var pName in database) {
-                var box = document.createElement("div");
-                box.className = "person-box";
-                box.setAttribute("ondblclick", "settlePerson('" + pName + "')");
-                
-                var html = "<div class='person-header'><strong>👤 " + pName + "</strong><span class='settle-text'>Double-click to settle</span></div>";
-                
-                for (var i = 0; i < database[pName].items.length; i++) {
-                    var itm = database[pName].items[i];
-                    html += "<div class='line'><span>• " + itm.itemName + "</span><span>$" + itm.itemPrice.toFixed(2) + "</span></div>";
+        // Prepare the payload matching your Google Sheets column names exactly
+        const dataPayload = {
+            "data": [
+                {
+                    "Date": today,
+                    "Customer Name": name,
+                    "Total Cost": total,
+                    "Amount Paid": paid,
+                    "Remaining Balance": balance
                 }
+            ]
+        };
+
+        // Make the background request to update your Google Sheet
+        fetch(sheetDbUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dataPayload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.created === 1) {
+                status.style.color = "green";
+                status.innerText = "✓ Successfully Logged!";
                 
-                html += "<div class='line total'><span>Running Tally:</span><span>$" + database[pName].total.toFixed(2) + "</span></div>";
+                // Reset inputs for the next transaction
+                document.getElementById('customerName').value = '';
+                document.getElementById('totalCost').value = '';
+                document.getElementById('amountPaid').value = '';
+                document.getElementById('remainingBalance').innerText = '0.00';
                 
-                box.innerHTML = html;
-                area.appendChild(box);
+                // Let the user know it succeeded via Telegram haptic feedback if available
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            } else {
+                status.style.color = "red";
+                status.innerText = "Error saving. Double check your API settings.";
             }
-            document.getElementById("big-total").innerHTML = "<strong>$" + grandTotal.toFixed(2) + "</strong>";
-        }
-    </script>
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            status.style.color = "red";
+            status.innerText = "Network error. Try again.";
+        });
+    }
+</script>
+
 </body>
 </html>
