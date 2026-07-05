@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tab Tracker Pro</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
+        .container { max-width: 450px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #333; }
+        
+        /* New Form Styling */
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 4px; }
+        .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        
+        /* Action Buttons */
+        .btn-row { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        button.add-btn { flex: 2; padding: 12px; background: #0088cc; color: white; }
+        button.add-btn:hover { background: #0077b3; }
+        button.clear-btn { flex: 1; padding: 12px; background: #e63946; color: white; }
+        button.clear-btn:hover { background: #cc333f; }
+
+        /* Display Cards */
+        .person-box { background: #f9f9f9; padding: 12px; margin-bottom: 12px; border-left: 4px solid #0088cc; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+        .person-box:hover { background: #f1f1f1; }
+        .person-header { margin: 0 0 8px 0; font-size: 16px; color: #333; display: flex; justify-content: space-between; }
+        .settle-text { font-size: 11px; color: #e63946; font-weight: bold; text-transform: uppercase; }
+        .line { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; color: #555; }
+        .total { font-weight: bold; border-top: 1px dashed #ccc; margin-top: 5px; padding-top: 5px; color: #333; }
+        
+        .grand-box { display: flex; justify-content: space-between; font-size: 18px; margin-top: 20px; padding-top: 15px; border-top: 2px solid #333; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Add to Tab</h2>
+        
+        <div class="form-group">
+            <label for="input-name">Who is this for?</label>
+            <input type="text" id="input-name" placeholder="e.g., John Doe">
+        </div>
+        <div class="form-group">
+            <label for="input-item">What did they take?</label>
+            <input type="text" id="input-item" placeholder="e.g., Soda">
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+                <label for="input-price">Price for ONE ($)</label>
+                <input type="number" id="input-price" step="0.01" placeholder="0.00">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label for="input-qty">Quantity</label>
+                <input type="number" id="input-qty" value="1" min="1">
+            </div>
+        </div>
+        
+        <div class="btn-row">
+            <button class="add-btn" onclick="handleFormSubmit()">+ Add Item</button>
+            <button class="clear-btn" onclick="clearForm()">Clear Form</button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <h2>Open Tabs</h2>
+        <div id="display-area"></div>
+        
+        <div class="grand-box">
+            <span><strong>Grand Total:</strong></span>
+            <span id="big-total"><strong>$0.00</strong></span>
+        </div>
+    </div>
+
+    <script>
+        var grandTotal = 0;
+        var database = {};
+        
+        // BACKEND READY: This array keeps a continuous log of every single sale item for your permanent records
+        var salesLog = [];
+        function handleFormSubmit() {
+            // Grab values from form
+            var nameEl = document.getElementById("input-name");
+            var itemEl = document.getElementById("input-item");
+            var priceEl = document.getElementById("input-price");
+            var qtyEl = document.getElementById("input-qty");
+
+            var name = nameEl.value.trim();
+            var item = itemEl.value.trim();
+            var numPrice = parseFloat(priceEl.value);
+            var numQty = parseInt(qtyEl.value);
+
+            // Validation
+            if (!name || !item) {
+                alert("Please fill out both Name and Item fields.");
+                return;
+            }
+            if (isNaN(numPrice) || numPrice < 0) {
+                alert("Please enter a valid price.");
+                return;
+            }
+            if (isNaN(numQty) || numQty <= 0) {
+                alert("Please enter a quantity of 1 or more.");
+                return;
+            }
+
+            // Calculate item cost
+            var itemTotalCost = numPrice * numQty;
+
+            // Update Open Tabs Database
+            if (!database[name]) {
+                database[name] = { total: 0, items: [] };
+            }
+
+            var displayItemName = item;
+            if (numQty > 1) {
+                displayItemName = item + " (x" + numQty + ")";
+            }
+
+            database[name].items.push({ itemName: displayItemName, itemPrice: itemTotalCost });
+            database[name].total += itemTotalCost;
+            grandTotal += itemTotalCost;
+
+            // Record to Sales Log for Backend/Tally use
+            var logEntry = {
+                timestamp: new Date().toISOString(),
+                customer: name,
+                item: item,
+                unitPrice: numPrice,
+                quantity: numQty,
+                totalCost: itemTotalCost
+            };
+            salesLog.push(logEntry);
+            
+            // Log to console so you can see it working behind the scenes
+            console.log("Permanent Sales Log Update:", salesLog);
+
+            // UI Refresh & Partial Form reset (keeps name for quick consecutive adding)
+            render();
+            itemEl.value = "";
+            priceEl.value = "";
+            qtyEl.value = "1";
+            itemEl.focus();
+        }
+
+        function clearForm() {
+            document.getElementById("input-name").value = "";
+            document.getElementById("input-item").value = "";
+            document.getElementById("input-price").value = "";
+            document.getElementById("input-qty").value = "1";
+        }
+
+        function settlePerson(pName) {
+            if (confirm("Clear all items and reset " + pName + "'s tab to $0.00? (This does NOT erase your master sales log history)")) {
+                grandTotal -= database[pName].total;
+                delete database[pName];
+                render();
+            }
+        }
+
+        function render() {
+            var area = document.getElementById("display-area");
+            area.innerHTML = "";
+
+            for (var pName in database) {
+                var box = document.createElement("div");
+                box.className = "person-box";
+                box.setAttribute("ondblclick", "settlePerson('" + pName + "')");
+                
+                var html = "<div class='person-header'><strong>👤 " + pName + "</strong><span class='settle-text'>Double-click to settle</span></div>";
+                
+                for (var i = 0; i < database[pName].items.length; i++) {
+                    var itm = database[pName].items[i];
+                    html += "<div class='line'><span>• " + itm.itemName + "</span><span>$" + itm.itemPrice.toFixed(2) + "</span></div>";
+                }
+                
+                html += "<div class='line total'><span>Running Tally:</span><span>$" + database[pName].total.toFixed(2) + "</span></div>";
+                
+                box.innerHTML = html;
+                area.appendChild(box);
+            }
+            document.getElementById("big-total").innerHTML = "<strong>$" + grandTotal.toFixed(2) + "</strong>";
+        }
+    </script>
+</body>
+</html>
