@@ -3,187 +3,399 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Tracker Mini App</title>
+    <title>Tab Tracker Pro - Dark Edition</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #222222);
-            margin: 0;
-            padding: 20px;
+        /* Modern Dark Mode Aesthetics */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: #121212; 
+            color: #e0e0e0;
+            padding: 20px; 
+            margin: 0; 
         }
-        .container {
-            max-width: 400px;
-            margin: 0 auto;
+        .container { 
+            max-width: 450px; 
+            margin: 0 auto; 
+            background: #1e1e1e; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
+            border: 1px solid #2d2d2d;
         }
-        h2 {
-            text-align: center;
-            color: var(--tg-theme-button-color, #3390ec);
+        h2 { margin-top: 0; color: #52a7ff; text-align: center; font-size: 20px; }
+        
+        /* Form Styling */
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 13px; font-weight: bold; color: #b0b0b0; margin-bottom: 5px; }
+        .form-group input { 
+            width: 100%; 
+            padding: 12px; 
+            border: 2px solid #3a3a3a; 
+            border-radius: 8px; 
+            box-sizing: border-box; 
+            font-size: 16px; 
+            background: #2a2a2a; 
+            color: #ffffff; 
+            transition: border-color 0.2s;
         }
-        .form-group {
-            margin-bottom: 15px;
+        .form-group input:focus {
+            border-color: #52a7ff;
+            outline: none;
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            font-size: 14px;
+        
+        /* Action Buttons */
+        .btn-row { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; transition: background 0.2s; }
+        button.add-btn { flex: 2; padding: 14px; background: #52a7ff; color: #121212; }
+        button.add-btn:hover { background: #3b8eed; }
+        button.clear-btn { flex: 1; padding: 14px; background: #cf6679; color: #121212; }
+        button.clear-btn:hover { background: #b85466; }
+
+        /* Display Cards */
+        .person-box { 
+            background: #252525; 
+            padding: 14px; 
+            margin-bottom: 12px; 
+            border-left: 4px solid #52a7ff; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: background 0.2s; 
+            border-top: 1px solid #2d2d2d;
+            border-right: 1px solid #2d2d2d;
+            border-bottom: 1px solid #2d2d2d;
         }
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-sizing: border-box;
-            background-color: var(--tg-theme-secondary-bg-color, #f4f4f5);
-            color: var(--tg-theme-text-color, #222222);
-            font-size: 16px;
-        }
-        .result-box {
-            background-color: #e8f4fd;
-            border-left: 4px solid #3390ec;
-            padding: 12px;
-            margin: 15px 0;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        button:hover {
-            opacity: 0.9;
-        }
-        #statusMessage {
-            text-align: center;
-            margin-top: 15px;
-            font-weight: bold;
-        }
+        .person-box:hover { background: #2d2d2d; }
+        .person-header { margin: 0 0 10px 0; font-size: 16px; color: #ffffff; display: flex; justify-content: space-between; align-items: center; }
+        .settle-text { font-size: 10px; color: #cf6679; font-weight: bold; text-transform: uppercase; background: rgba(207, 102, 121, 0.15); padding: 3px 8px; border-radius: 4px; }
+        .line { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; color: #b0b0b0; }
+        .total { font-weight: bold; border-top: 1px dashed #444; margin-top: 8px; padding-top: 8px; color: #ffffff; }
+        
+        .grand-box { display: flex; justify-content: space-between; font-size: 18px; margin-top: 20px; padding-top: 15px; border-top: 2px solid #444; color: #ffffff; }
+        #statusMessage { text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 14px; min-height: 20px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Log Sale / Payment</h2>
-    
-    <div class="form-group">
-        <label for="customerName">Customer Name:</label>
-        <input type="text" id="customerName" placeholder="e.g. John Doe">
-    </div>
+    <div class="container">
+        <h2>Log Sale / Item</h2>
+        <div id="statusMessage"></div>
+        
+        <div class="form-group">
+            <label for="input-name">Customer Name:</label>
+            <input type="text" id="input-name" placeholder="e.g., John Doe">
+        </div>
+        <div class="form-group">
+            <label for="input-item">What did they take?</label>
+            <input type="text" id="input-item" placeholder="e.g., Soda">
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+                <label for="input-price">Price for ONE ($)</label>
+                <input type="number" id="input-price" step="0.01" placeholder="0.00">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label for="input-qty">Quantity</label>
+                <input type="number" id="input-qty" value="1" min="1">
+            </div>
+        </div>
+        
+        <div class="btn-row">
+            <button class="add-btn" onclick="handleFormSubmit()">+ Add to Tab</button>
+            <button class="clear-btn" onclick="clearForm()">Clear Form</button>
+        </div>
 
-    <div class="form-group">
-        <label for="totalCost">Total Item Cost ($):</label>
-        <input type="number" id="totalCost" placeholder="0.00" oninput="calculateBalance()">
-    </div>
+        <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
 
-    <div class="form-group">
-        <label for="amountPaid">Amount Paid Today ($):</label>
-        <input type="number" id="amountPaid" placeholder="0.00" oninput="calculateBalance()">
+        <h2>Open Tabs (Pending Balances)</h2>
+        <div id="display-area"></div>
+        
+        <div class="grand-box">
+            <span><strong>Total Outstanding:</strong></span>
+            <span id="big-total"><strong>$0.00</strong></span>
+        </div>
     </div>
-
-    <div class="result-box">
-        Remaining Balance Owed: $<span id="remainingBalance">0.00</span>
-    </div>
-
-    <button onclick="submitToSheets()">Submit to Log Book</button>
-    
-    <div id="statusMessage"></div>
-</div>
 
 <script>
-    // Initialize Telegram Web App
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand(); // Expands app to full screen in Telegram
-
-    // Automatically calculate the remaining balance as they type
-    function calculateBalance() {
-        const total = parseFloat(document.getElementById('totalCost').value) || 0;
-        const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
-        const balance = total - paid;
-        
-        document.getElementById('remainingBalance').innerText = balance.toFixed(2);
-    }
-
-    // Send the data directly to your SheetDB API URL
-    function submitToSheets() {
-        const name = document.getElementById('customerName').value;
-        const total = document.getElementById('totalCost').value;
-        const paid = document.getElementById('amountPaid').value;
-        const balance = document.getElementById('remainingBalance').innerText;
-        const status = document.getElementById('statusMessage');
-        // Simple validation to make sure fields aren't empty
-        if (!name ||!totsl|| !paid) {
-            status.style.color = "red";
-            status.innerText = "Please fill in all fields.";
-            return;
+        const tg = window.Telegram.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
         }
 
-        status.style.color = "orange";
-        status.innerText = "Sending to log book...";
-
-        // Get today's date and time
-        const today = new Date().toLocaleString();
-
-        // Put your exact SheetDB API link below inside the quotation marks:
         const sheetDbUrl = "https://sheetdb.io/api/v1/imabkvc4hn7d3"; 
+        var grandTotal = 0;
+        var monthlyCollected = 0; // TRACKS TOTAL REVENUE COLLECTED
+        var database = {};
 
-        // Prepare the payload matching your Google Sheets column names exactly
-        const dataPayload = {
-            "data": [
-                {
-                    "Date": today,
-                    "Customer Name": name,
-                    "Total Cost": total,
-                    "Amount Paid": paid,
-                    "Remaining Balance": balance
-                }
-            ]
+        function getTodayDateString() {
+            const d = new Date();
+            return String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0') + '/' + d.getFullYear();
+        }
+
+        // Gets the MM/ prefix to match rows within the current calendar month
+        function getCurrentMonthString() {
+            const d = new Date();
+            return String(d.getMonth() + 1).padStart(2, '0') + '/';
+        }
+
+        window.onload = function() {
+            initApp();
         };
 
-        // Make the background request to update your Google Sheet
-        fetch(sheetDbUrl, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(dataPayload)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.created === 1) {
-                status.style.color = "green";
-                status.innerText = "✓ Successfully Logged!";
-                
-                // Reset inputs for the next transaction
-                document.getElementById('customerName').value = '';
-                document.getElementById('totalCost').value = '';
-                document.getElementById('amountPaid').value = '';
-                document.getElementById('remainingBalance').innerText = '0.00';
-                
-                // Let the user know it succeeded via Telegram haptic feedback if available
-                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                status.style.color = "red";
-                status.innerText = "Error saving. Double check your API settings.";
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            status.style.color = "red";
-            status.innerText = "Network error. Try again.";
-        });
-    }
-</script>
+        function initApp() {
+            var status = document.getElementById("statusMessage");
+            status.style.color = "#e0e0e0";
+            status.innerText = "Loading active monthly accounting...";
 
+            var todayDate = getTodayDateString();
+            var currentMonthPrefix = getCurrentMonthString();
+
+            fetch(sheetDbUrl)
+            .then(response => response.json())
+            .then(rows => {
+                if (Array.isArray(rows)) {
+                    database = {};
+                    grandTotal = 0;
+                    monthlyCollected = 0; // Reset accountant tracker
+
+                    rows.forEach(row => {
+                        var name = row.CustomerName;
+                        var balanceOwed = parseFloat(row.RemainingBalance) || 0;
+                        var amountPaid = parseFloat(row.AmountPaid) || 0;
+                        var customerId = row.ID;
+                        var rowDate = row.Date || "";
+
+                        // 1. Backend Accounting: Sum up all actual payments made this month
+                        if (rowDate.startsWith(currentMonthPrefix)) {
+                            monthlyCollected += amountPaid;
+                        }
+
+                        // 2. UI Mapping: Only display outstanding active balances for today
+                        if (rowDate === todayDate && name && balanceOwed > 0) {
+                            database[name] = {
+                                id: customerId,
+                                total: balanceOwed,
+                                items: [
+                                    { itemName: "📂 Balance Brought Forward", itemPrice: balanceOwed }
+                                ]
+                            };
+                            grandTotal += balanceOwed;
+                        }
+                    });
+                }
+                status.style.color = "#81c784";
+                status.innerText = "✓ Accounting Logs Synchronized!";
+                render();
+            })
+            .catch(error => {
+                console.error('Initialization Error:', error);
+                status.style.color = "#cf6679";
+                status.innerText = "Failed to pull cloud sync data on startup.";
+            });
+        }
+
+        function handleFormSubmit() {
+            var nameEl = document.getElementById("input-name");
+            var itemEl = document.getElementById("input-item");
+            var priceEl = document.getElementById("input-price");
+            var qtyEl = document.getElementById("input-qty");
+            var status = document.getElementById("statusMessage");
+
+            var name = nameEl.value.trim();
+            var item = itemEl.value.trim();
+            var numPrice = parseFloat(priceEl.value);
+            var numQty = parseInt(qtyEl.value);
+
+            if (!name || !item || isNaN(numPrice) || isNaN(numQty)) {
+                status.style.color = "#cf6679";
+                status.innerText = "Please fill out all fields perfectly.";
+                return;
+            }
+
+            var itemTotalCost = numPrice * numQty;
+
+            if (!database[name]) {
+                database[name] = { id: null, total: 0, items: [] };
+            }
+
+            var displayItemName = item;
+            if (numQty > 1) {
+                displayItemName = item + " (x" + numQty + ")";
+            }
+
+            database[name].items.push({ itemName: displayItemName, itemPrice: itemTotalCost });
+            database[name].total += itemTotalCost;
+            grandTotal += itemTotalCost;
+
+            processCustomerAndSync(name, itemTotalCost, 0);
+            render();
+            
+            itemEl.value = "";
+            priceEl.value = "";
+            qtyEl.value = "1";
+            itemEl.focus();
+        }
+
+        function settlePerson(pName) {
+            var currentOwed = database[pName].total;
+            
+            var inputPayment = prompt(
+                "👤 Settle Tab: " + pName + "\n" +
+                "Total Balance Pending: $" + currentOwed.toFixed(2) + "\n\n" +
+                "Enter amount paid today:", 
+                currentOwed.toFixed(2)
+            );
+
+            if (inputPayment === null) return; 
+            
+            var amountPaid = parseFloat(inputPayment);
+            if (isNaN(amountPaid) || amountPaid < 0) {
+                alert("Please enter a valid numeric value.");
+                return;
+            }
+
+            processCustomerAndSync(pName, 0, amountPaid, currentOwed);
+
+            grandTotal -= amountPaid;
+            monthlyCollected += amountPaid; // Safely add new revenue to your collection books
+            database[pName].total = currentOwed - amountPaid;
+
+            if (database[pName].total <= 0) {
+                delete database[pName];
+            } else {
+                database[pName].items.push({ 
+                    itemName: "💳 Payment Received", 
+                    itemPrice: -amountPaid 
+                });
+            }
+            render();
+        }
+
+        function processCustomerAndSync(customerName, costAdd, paymentAdd, currentOwedContext = 0) {
+            var status = document.getElementById("statusMessage");
+            status.style.color = "#e0e0e0";
+            status.innerText = "Checking customer profile database...";
+
+            fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(customerName))
+            .then(response => response.json())
+            .then(allHistory => {
+                var assignedId = "GUEST";
+                var recordExistsToday = false;
+                var todayDate = getTodayDateString();
+                var existingRowData = null;
+
+                if (Array.isArray(allHistory) && allHistory.length > 0) {
+                    for(var i = 0; i < allHistory.length; i++) {
+                        if (allHistory[i].ID && allHistory[i].ID !== "GUEST") {
+                            assignedId = allHistory[i].ID;
+                        }
+                        if (allHistory[i].Date === todayDate) {
+                            recordExistsToday = true;
+                            existingRowData = allHistory[i];
+                        }
+                    }
+                } else {
+                    var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
+                    if (!isGuest) {
+                        assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
+                        alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
+                    }
+                }
+
+                if (database[customerName]) {
+                    database[customerName].id = assignedId;
+                }
+
+                if (recordExistsToday && existingRowData) {
+                    var updatedTotalCost = (parseFloat(existingRowData.TotalCost) || 0) + costAdd;
+                    var updatedAmountPaid = (parseFloat(existingRowData.AmountPaid) || 0) + paymentAdd;
+                    var updatedRemainingBalance = updatedTotalCost - updatedAmountPaid;
+
+                    return fetch(sheetDbUrl + "/ID/" + encodeURIComponent(assignedId) + "?Date=" + encodeURIComponent(todayDate), {
+                        method: 'PATCH',
+                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            data: {
+                                TotalCost: updatedTotalCost.toFixed(2),
+                                AmountPaid: updatedAmountPaid.toFixed(2),
+                                RemainingBalance: updatedRemainingBalance.toFixed(2)
+                            }
+                        })
+                    });
+                } else {
+                    var startingCost = costAdd > 0 ? costAdd : currentOwedContext;
+                    var remainingBalance = startingCost - paymentAdd;
+
+                    return fetch(sheetDbUrl, {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            data: [{
+                                ID: assignedId,
+                                Date: todayDate,
+                                CustomerName: customerName,
+                                TotalCost: startingCost.toFixed(2),
+                                AmountPaid: paymentAdd.toFixed(2),
+                                RemainingBalance: remainingBalance.toFixed(2)
+                            }]
+                        })
+                    });
+                }
+            })
+            .then(response => response.json())
+            .then(result => {
+                status.style.color = "#81c784";
+                status.innerText = "✓ Ledger Synchronized Engine Match!";
+                render();
+            })
+            .catch(error => {
+                console.error('Error handling customer logging:', error);
+                status.style.color = "#cf6679";
+                status.innerText = "Saved to interface memory. Sync pending.";
+            });
+        }
+
+        function clearForm() {
+            document.getElementById("input-name").value = "";
+            document.getElementById("input-item").value = "";
+            document.getElementById("input-price").value = "";
+            document.getElementById("input-qty").value = "1";
+            document.getElementById("statusMessage").innerText = "";
+        }
+
+        function render() {
+            var area = document.getElementById("display-area");
+            area.innerHTML = "";
+
+            for (var pName in database) {
+                var box = document.createElement("div");
+                box.className = "person-box";
+                box.setAttribute("ondblclick", "settlePerson('" + pName + "')");
+                
+                var displayId = database[pName].id ? " [" + database[pName].id + "]" : "";
+                var html = "<div class='person-header'><strong>👤 " + pName + displayId + "</strong><span class='settle-text'>Dbl-Click to Settle</span></div>";
+                
+                for (var i = 0; i < database[pName].items.length; i++) {
+                    var itm = database[pName].items[i];
+                    var formattedPrice = itm.itemPrice < 0 ? "-$" + Math.abs(itm.itemPrice).toFixed(2) : "$" + itm.itemPrice.toFixed(2);
+                    html += "<div class='line'><span>• " + itm.itemName + "</span><span>" + formattedPrice + "</span></div>";
+                }
+                
+                html += "<div class='line total'><span>Remaining Balance Owed:</span><span>$" + database[pName].total.toFixed(2) + "</span></div>";
+                
+                box.innerHTML = html;
+                area.appendChild(box);
+            }
+            
+            // Publicly updates only today's open tab balance summary
+            document.getElementById("big-total").innerHTML = "<strong>$" + Math.max(0, grandTotal).toFixed(2) + "</strong>";
+            
+            // PRIVACY FIX: Hidden safely inside your browser's private inspection console log
+            console.log("--- BACKEND ACCOUNTING REPORT ---");
+            console.log("Current Month Revenue Collected: $" + Math.max(0, monthlyCollected).toFixed(2));
+            console.log("---------------------------------");
+        }
+    </script>
 </body>
 </html>
