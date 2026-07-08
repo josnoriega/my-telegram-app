@@ -115,8 +115,9 @@
             <span id="big-total"><strong>$0.00</strong></span>
         </div>
     </div>
+       
 
-<script>
+    <script>
         const tg = window.Telegram.WebApp;
         if (tg) {
             tg.ready();
@@ -125,7 +126,7 @@
 
         const sheetDbUrl = "https://sheetdb.io/api/v1/imabkvc4hn7d3"; 
         var grandTotal = 0;
-        var monthlyCollected = 0; // TRACKS TOTAL REVENUE COLLECTED
+        var monthlyCollected = 0; 
         var database = {};
 
         function getTodayDateString() {
@@ -133,7 +134,6 @@
             return String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0') + '/' + d.getFullYear();
         }
 
-        // Gets the MM/ prefix to match rows within the current calendar month
         function getCurrentMonthString() {
             const d = new Date();
             return String(d.getMonth() + 1).padStart(2, '0') + '/';
@@ -144,56 +144,60 @@
         };
 
         function initApp() {
-            var status = document.getElementById("statusMessage");
-            status.style.color = "#e0e0e0";
-            status.innerText = "Loading active monthly accounting...";
+    var status = document.getElementById("statusMessage");
+    status.style.color = "#e0e0e0";
+    status.innerText = "Loading active monthly accounting...";
 
-            var todayDate = getTodayDateString();
-            var currentMonthPrefix = getCurrentMonthString();
+    var currentMonthPrefix = getCurrentMonthString();
 
-            fetch(sheetDbUrl)
-            .then(response => response.json())
-            .then(rows => {
-                if (Array.isArray(rows)) {
-                    database = {};
-                    grandTotal = 0;
-                    monthlyCollected = 0; // Reset accountant tracker
+    fetch(sheetDbUrl)
+    .then(response => response.json())
+    .then(rows => {
+        if (Array.isArray(rows)) {
+            database = {};
+            grandTotal = 0;
+            monthlyCollected = 0; 
 
-                    rows.forEach(row => {
-                        var name = row.CustomerName;
-                        var balanceOwed = parseFloat(row.RemainingBalance) || 0;
-                        var amountPaid = parseFloat(row.AmountPaid) || 0;
-                        var customerId = row.ID;
-                        var rowDate = row.Date || "";
+            rows.forEach(row => {
+                var name = row.CustomerName;
+                var balanceOwed = parseFloat(row.RemainingBalance) || 0;
+                var amountPaid = parseFloat(row.AmountPaid) || 0;
+                var customerId = row.ID;
+                var rowDate = row.Date || "";
 
-                        // 1. Backend Accounting: Sum up all actual payments made this month
-                        if (rowDate.startsWith(currentMonthPrefix)) {
-                            monthlyCollected += amountPaid;
-                        }
-
-                        // 2. UI Mapping: Only display outstanding active balances for today
-                        if (rowDate === todayDate && name && balanceOwed > 0) {
-                            database[name] = {
-                                id: customerId,
-                                total: balanceOwed,
-                                items: [
-                                    { itemName: "📂 Balance Brought Forward", itemPrice: balanceOwed }
-                                ]
-                            };
-                            grandTotal += balanceOwed;
-                        }
-                    });
+                // 1. Backend Accounting: Keep tracking monthly revenue collected
+                if (rowDate.startsWith(currentMonthPrefix)) {
+                    monthlyCollected += amountPaid;
                 }
-                status.style.color = "#81c784";
-                status.innerText = "✓ Accounting Logs Synchronized!";
-                render();
-            })
-            .catch(error => {
-                console.error('Initialization Error:', error);
-                status.style.color = "#cf6679";
-                status.innerText = "Failed to pull cloud sync data on startup.";
+
+                // 2. FIXED UI MAPPING: If they owe money, show their card on the front end!
+                if (name && balanceOwed > 0) {
+                    // If the customer already has an entry from a different row today, combine them
+                    if (database[name]) {
+                        database[name].total += balanceOwed;
+                    } else {
+                        database[name] = {
+                            id: customerId,
+                            total: balanceOwed,
+                            items: [
+                                { itemName: "📂 Active Balance Owed", itemPrice: balanceOwed }
+                            ]
+                        };
+                    }
+                    grandTotal += balanceOwed;
+                }
             });
         }
+        status.style.color = "#81c784";
+        status.innerText = "✓ Open Balances Loaded!";
+        render();
+    })
+    .catch(error => {
+        console.error('Initialization Error:', error);
+        status.style.color = "#cf6679";
+        status.innerText = "Failed to pull cloud sync data on startup.";
+    });
+}
 
         function handleFormSubmit() {
             var nameEl = document.getElementById("input-name");
@@ -258,103 +262,109 @@
             processCustomerAndSync(pName, 0, amountPaid, currentOwed);
 
             grandTotal -= amountPaid;
-            monthlyCollected += amountPaid; // Safely add new revenue to your collection books
+            if (typeof monthlyCollected !== 'undefined') {
+                monthlyCollected += amountPaid;
+            }
+            
             database[pName].total = currentOwed - amountPaid;
 
             if (database[pName].total <= 0) {
                 delete database[pName];
             } else {
+                if (!database[pName].items) database[pName].items = [];
                 database[pName].items.push({ 
-                    itemName: "💳 Payment Received", 
+                    itemName: " Paid", 
                     itemPrice: -amountPaid 
                 });
             }
+
             render();
         }
 
-        function processCustomerAndSync(customerName, costAdd, paymentAdd, currentOwedContext = 0) {
-            var status = document.getElementById("statusMessage");
-            status.style.color = "#e0e0e0";
-            status.innerText = "Checking customer profile database...";
+       function processCustomerAndSync(customerName, costAdd, paymentAdd, currentOwedContext = 0) {
+    var status = document.getElementById("statusMessage");
+    status.style.color = "#e0e0e0";
+    status.innerText = "Checking customer profile database...";
 
-            fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(customerName))
-            .then(response => response.json())
-            .then(allHistory => {
-                var assignedId = "GUEST";
-                var recordExistsToday = false;
-                var todayDate = getTodayDateString();
-                var existingRowData = null;
+    fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(customerName))
+    .then(response => response.json())
+    .then(allHistory => {
+        var assignedId = "GUEST";
+        var recordExistsToday = false;
+        var todayDate = getTodayDateString();
+        var existingRowData = null;
 
-                if (Array.isArray(allHistory) && allHistory.length > 0) {
-                    for(var i = 0; i < allHistory.length; i++) {
-                        if (allHistory[i].ID && allHistory[i].ID !== "GUEST") {
-                            assignedId = allHistory[i].ID;
-                        }
-                        if (allHistory[i].Date === todayDate) {
-                            recordExistsToday = true;
-                            existingRowData = allHistory[i];
-                        }
+        if (Array.isArray(allHistory) && allHistory.length > 0) {
+            for(var i = 0; i < allHistory.length; i++) {
+                if (allHistory[i].ID && allHistory[i].ID !== "GUEST") {
+                    assignedId = allHistory[i].ID;
+                }
+                if (allHistory[i].Date === todayDate) {
+                    recordExistsToday = true;
+                    existingRowData = allHistory[i];
+                }
+            }
+        } else {
+            var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
+            if (!isGuest) {
+                assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
+                alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
+            }
+        }
+
+        if (database[customerName]) {
+            database[customerName].id = assignedId;
+        }
+
+        if (recordExistsToday && existingRowData) {
+            var updatedTotalCost = (parseFloat(existingRowData.TotalCost) || 0) + costAdd;
+            var updatedAmountPaid = (parseFloat(existingRowData.AmountPaid) || 0) + paymentAdd;
+            var updatedRemainingBalance = updatedTotalCost - updatedAmountPaid;
+
+            // FIX: Match by CustomerName and Date to update the exact same line cleanly
+            return fetch(sheetDbUrl + "/CustomerName/" + encodeURIComponent(customerName) + "?Date=" + encodeURIComponent(todayDate), {
+                method: 'PATCH',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data: {
+                        TotalCost: updatedTotalCost.toFixed(2),
+                        AmountPaid: updatedAmountPaid.toFixed(2),
+                        RemainingBalance: updatedRemainingBalance.toFixed(2)
                     }
-                } else {
-                    var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
-                    if (!isGuest) {
-                        assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
-                        alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
-                    }
-                }
+                })
+            });
+        } else {
+            var startingCost = costAdd > 0 ? costAdd : currentOwedContext;
+            var remainingBalance = startingCost - paymentAdd;
 
-                if (database[customerName]) {
-                    database[customerName].id = assignedId;
-                }
-
-                if (recordExistsToday && existingRowData) {
-                    var updatedTotalCost = (parseFloat(existingRowData.TotalCost) || 0) + costAdd;
-                    var updatedAmountPaid = (parseFloat(existingRowData.AmountPaid) || 0) + paymentAdd;
-                    var updatedRemainingBalance = updatedTotalCost - updatedAmountPaid;
-
-                    return fetch(sheetDbUrl + "/ID/" + encodeURIComponent(assignedId) + "?Date=" + encodeURIComponent(todayDate), {
-                        method: 'PATCH',
-                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            data: {
-                                TotalCost: updatedTotalCost.toFixed(2),
-                                AmountPaid: updatedAmountPaid.toFixed(2),
-                                RemainingBalance: updatedRemainingBalance.toFixed(2)
-                            }
-                        })
-                    });
-                } else {
-                    var startingCost = costAdd > 0 ? costAdd : currentOwedContext;
-                    var remainingBalance = startingCost - paymentAdd;
-
-                    return fetch(sheetDbUrl, {
-                        method: 'POST',
-                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            data: [{
-                                ID: assignedId,
-                                Date: todayDate,
-                                CustomerName: customerName,
-                                TotalCost: startingCost.toFixed(2),
-                                AmountPaid: paymentAdd.toFixed(2),
-                                RemainingBalance: remainingBalance.toFixed(2)
-                            }]
-                        })
-                    });
-                }
-            })
-            .then(response => response.json())
-            .then(result => {
-                status.style.color = "#81c784";
-                status.innerText = "✓ Ledger Synchronized Engine Match!";
-                render();
-            })
-            .catch(error => {
-                console.error('Error handling customer logging:', error);
-                status.style.color = "#cf6679";
-                status.innerText = "Saved to interface memory. Sync pending.";
+            return fetch(sheetDbUrl, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data: [{
+                        ID: assignedId,
+                        Date: todayDate,
+                        CustomerName: customerName,
+                        TotalCost: startingCost.toFixed(2),
+                        AmountPaid: paymentAdd.toFixed(2),
+                        RemainingBalance: remainingBalance.toFixed(2)
+                    }]
+                })
             });
         }
+    })
+    .then(response => response.json())
+    .then(result => {
+        status.style.color = "#81c784";
+        status.innerText = "✓ Ledger Synchronized Engine Match!";
+        render();
+    })
+    .catch(error => {
+        console.error('Error handling customer logging:', error);
+        status.style.color = "#cf6679";
+        status.innerText = "Saved to interface memory. Sync pending.";
+    });
+}
 
         function clearForm() {
             document.getElementById("input-name").value = "";
@@ -371,7 +381,7 @@
             for (var pName in database) {
                 var box = document.createElement("div");
                 box.className = "person-box";
-                box.setAttribute("ondblclick", "settlePerson('" + pName + "')");
+                box.setAttribute("ondblclick", "settlePerson('" + pName.replace(/'/g, "\\'") + "')");
                 
                 var displayId = database[pName].id ? " [" + database[pName].id + "]" : "";
                 var html = "<div class='person-header'><strong>👤 " + pName + displayId + "</strong><span class='settle-text'>Dbl-Click to Settle</span></div>";
@@ -388,10 +398,8 @@
                 area.appendChild(box);
             }
             
-            // Publicly updates only today's open tab balance summary
             document.getElementById("big-total").innerHTML = "<strong>$" + Math.max(0, grandTotal).toFixed(2) + "</strong>";
             
-            // PRIVACY FIX: Hidden safely inside your browser's private inspection console log
             console.log("--- BACKEND ACCOUNTING REPORT ---");
             console.log("Current Month Revenue Collected: $" + Math.max(0, monthlyCollected).toFixed(2));
             console.log("---------------------------------");
