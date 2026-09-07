@@ -280,7 +280,67 @@
 
             render();
         }
+function settlePerson(pName) {
+    var currentOwed = database[pName].total;
+    var inputPayment = prompt("👤 Settle Tab: " + pName + "\n" + "Total Balance Pending: $" + currentOwed.toFixed(2) + "\n\n" + "Enter amount paid today:", currentOwed.toFixed(2));
+    if (inputPayment === null) return;
+    var amountPaid = parseFloat(inputPayment);
+    if (isNaN(amountPaid) || amountPaid < 0) {
+        alert("Please enter a valid numeric value.");
+        return;
+    }
 
+    var status = document.getElementById("statusMessage");
+    status.style.color = "#e0e0e0";
+    status.innerText = "Applying payment to all records...";
+
+    fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(pName))
+        .then(response => response.json())
+        .then(records => {
+            if (Array.isArray(records) && records.length > 0) {
+                var updatePromises = [];
+                var remainingToPay = amountPaid;
+
+                records.forEach(row => {
+                    var remainingBalance = parseFloat(row.RemainingBalance) || 0;
+                    if (remainingBalance > 0 && remainingToPay > 0) {
+                        var paidSoFar = parseFloat(row.AmountPaid) || 0;
+                        var totalCost = parseFloat(row.TotalCost) || 0;
+
+                        var payTowardsThisRow = Math.min(remainingBalance, remainingToPay);
+                        var newPaid = paidSoFar + payTowardsThisRow;
+                        var newBalance = totalCost - newPaid;
+
+                        remainingToPay -= payTowardsThisRow;
+
+                        var endpoint = sheetDbUrl + "/CustomerName/" + encodeURIComponent(pName) + "?Date=" + encodeURIComponent(row.Date);
+                        
+                        updatePromises.push(
+                            fetch(endpoint, {
+                                method: 'PATCH',
+                                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    data: {
+                                        AmountPaid: newPaid.toFixed(2),
+                                        RemainingBalance: newBalance.toFixed(2)
+                                    }
+                                })
+                            })
+                        );
+                    }
+                });
+                return Promise.all(updatePromises);
+            }
+        })
+        .then(() => {
+            initApp();
+        })
+        .catch(error => {
+            console.error('Error settling customer tabs:', error);
+            status.style.color = "#cf6679";
+            status.innerText = "Error syncing settlement with cloud.";
+        });
+}
        function processCustomerAndSync(customerName, costAdd, paymentAdd, currentOwedContext = 0) {
     var status = document.getElementById("statusMessage");
     status.style.color = "#e0e0e0";
