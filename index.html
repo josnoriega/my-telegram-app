@@ -143,59 +143,54 @@
             initApp();
         };
 
-        function initApp() {
+       function settlePerson(pName) {
+    var currentOwed = database[pName].total;
+    var inputPayment = prompt(
+        "👤 Settle Tab: " + pName + "\n" + 
+        "Total Balance Pending: $" + currentOwed.toFixed(2) + "\n\n" + 
+        "Enter amount paid today:", currentOwed.toFixed(2)
+    );
+
+    if (inputPayment === null) return;
+    var amountPaid = parseFloat(inputPayment);
+
+    if (isNaN(amountPaid) || amountPaid < 0) {
+        alert("Please enter a valid numeric value.");
+        return;
+    }
+
     var status = document.getElementById("statusMessage");
     status.style.color = "#e0e0e0";
-    status.innerText = "Loading active monthly accounting...";
+    status.innerText = "Logging payment and syncing...";
 
-    var currentMonthPrefix = getCurrentMonthString();
+    var todayDate = getTodayDateString();
 
-    fetch(sheetDbUrl)
+    // Create a brand new line just for the payment with TODAY'S date.
+    fetch(sheetDbUrl, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            data: [{
+                ID: database[pName].id || "GUEST",
+                Date: todayDate,
+                CustomerName: pName,
+                TotalCost: "0.00",
+                AmountPaid: amountPaid.toFixed(2),
+                RemainingBalance: (-amountPaid).toFixed(2)
+            }]
+        })
+    })
     .then(response => response.json())
-    .then(rows => {
-        if (Array.isArray(rows)) {
-            database = {};
-            grandTotal = 0;
-            monthlyCollected = 0; 
-
-            rows.forEach(row => {
-                var name = row.CustomerName;
-                var balanceOwed = parseFloat(row.RemainingBalance) || 0;
-                var amountPaid = parseFloat(row.AmountPaid) || 0;
-                var customerId = row.ID;
-                var rowDate = row.Date || "";
-
-                // 1. Backend Accounting: Keep tracking monthly revenue collected
-                if (rowDate.startsWith(currentMonthPrefix)) {
-                    monthlyCollected += amountPaid;
-                }
-
-                // 2. FIXED UI MAPPING: If they owe money, show their card on the front end!
-                if (name && balanceOwed > 0) {
-                    // If the customer already has an entry from a different row today, combine them
-                    if (database[name]) {
-                        database[name].total += balanceOwed;
-                    } else {
-                        database[name] = {
-                            id: customerId,
-                            total: balanceOwed,
-                            items: [
-                                { itemName: "📂 Active Balance Owed", itemPrice: balanceOwed }
-                            ]
-                        };
-                    }
-                    grandTotal += balanceOwed;
-                }
-            });
-        }
-        status.style.color = "#81c784";
-        status.innerText = "✓ Open Balances Loaded!";
-        render();
+    .then(() => {
+        initApp(); // Reload everything to recalculate balances cleanly
     })
     .catch(error => {
-        console.error('Initialization Error:', error);
+        console.error('Error settling tab:', error);
         status.style.color = "#cf6679";
-        status.innerText = "Failed to pull cloud sync data on startup.";
+        status.innerText = "Error syncing settlement with cloud.";
     });
 }
 
@@ -282,9 +277,15 @@
         }
 function settlePerson(pName) {
     var currentOwed = database[pName].total;
-    var inputPayment = prompt("👤 Settle Tab: " + pName + "\n" + "Total Balance Pending: $" + currentOwed.toFixed(2) + "\n\n" + "Enter amount paid today:", currentOwed.toFixed(2));
+    var inputPayment = prompt(
+        "👤 Settle Tab: " + pName + "\n" + 
+        "Total Balance Pending: $" + currentOwed.toFixed(2) + "\n\n" + 
+        "Enter amount paid today:", currentOwed.toFixed(2)
+    );
+
     if (inputPayment === null) return;
     var amountPaid = parseFloat(inputPayment);
+
     if (isNaN(amountPaid) || amountPaid < 0) {
         alert("Please enter a valid numeric value.");
         return;
@@ -292,54 +293,37 @@ function settlePerson(pName) {
 
     var status = document.getElementById("statusMessage");
     status.style.color = "#e0e0e0";
-    status.innerText = "Applying payment to all records...";
+    status.innerText = "Logging payment and syncing...";
 
-    fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(pName))
-        .then(response => response.json())
-        .then(records => {
-            if (Array.isArray(records) && records.length > 0) {
-                var updatePromises = [];
-                var remainingToPay = amountPaid;
+    var todayDate = getTodayDateString();
 
-                records.forEach(row => {
-                    var remainingBalance = parseFloat(row.RemainingBalance) || 0;
-                    if (remainingBalance > 0 && remainingToPay > 0) {
-                        var paidSoFar = parseFloat(row.AmountPaid) || 0;
-                        var totalCost = parseFloat(row.TotalCost) || 0;
-
-                        var payTowardsThisRow = Math.min(remainingBalance, remainingToPay);
-                        var newPaid = paidSoFar + payTowardsThisRow;
-                        var newBalance = totalCost - newPaid;
-
-                        remainingToPay -= payTowardsThisRow;
-
-                        var endpoint = sheetDbUrl + "/CustomerName/" + encodeURIComponent(pName) + "?Date=" + encodeURIComponent(row.Date);
-                        
-                        updatePromises.push(
-                            fetch(endpoint, {
-                                method: 'PATCH',
-                                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    data: {
-                                        AmountPaid: newPaid.toFixed(2),
-                                        RemainingBalance: newBalance.toFixed(2)
-                                    }
-                                })
-                            })
-                        );
-                    }
-                });
-                return Promise.all(updatePromises);
-            }
+    // Create a brand new line just for the payment with TODAY'S date.
+    fetch(sheetDbUrl, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            data: [{
+                ID: database[pName].id || "GUEST",
+                Date: todayDate,
+                CustomerName: pName,
+                TotalCost: "0.00",
+                AmountPaid: amountPaid.toFixed(2),
+                RemainingBalance: (-amountPaid).toFixed(2)
+            }]
         })
-        .then(() => {
-            initApp();
-        })
-        .catch(error => {
-            console.error('Error settling customer tabs:', error);
-            status.style.color = "#cf6679";
-            status.innerText = "Error syncing settlement with cloud.";
-        });
+    })
+    .then(response => response.json())
+    .then(() => {
+        initApp(); // Reload everything to recalculate balances cleanly
+    })
+    .catch(error => {
+        console.error('Error settling tab:', error);
+        status.style.color = "#cf6679";
+        status.innerText = "Error syncing settlement with cloud.";
+    });
 }
        function processCustomerAndSync(customerName, costAdd, paymentAdd, currentOwedContext = 0) {
     var status = document.getElementById("statusMessage");
