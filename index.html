@@ -143,7 +143,8 @@
             initApp();
         };
 
-       function settlePerson(pName) {
+     
+    status.style.color = "#e0e0e0";  function settlePerson(pName) {
     var currentOwed = database[pName].total;
     var inputPayment = prompt(
         "👤 Settle Tab: " + pName + "\n" + 
@@ -160,7 +161,6 @@
     }
 
     var status = document.getElementById("statusMessage");
-    status.style.color = "#e0e0e0";
     status.innerText = "Logging payment and syncing...";
 
     var todayDate = getTodayDateString();
@@ -235,55 +235,6 @@
             qtyEl.value = "1";
             itemEl.focus();
         }
-function settlePerson(pName) {
-    var currentOwed = database[pName].total;
-    var inputPayment = prompt(
-        "👤 Settle Tab: " + pName + "\n" + 
-        "Total Balance Pending: $" + currentOwed.toFixed(2) + "\n\n" + 
-        "Enter amount paid today:", currentOwed.toFixed(2)
-    );
-
-    if (inputPayment === null) return;
-    var amountPaid = parseFloat(inputPayment);
-
-    if (isNaN(amountPaid) || amountPaid < 0) {
-        alert("Please enter a valid numeric value.");
-        return;
-    }
-
-    var status = document.getElementById("statusMessage");
-    status.style.color = "#e0e0e0";
-    status.innerText = "Logging payment and syncing...";
-
-    var todayDate = getTodayDateString();
-
-    fetch(sheetDbUrl, {
-        method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            data: [{
-                ID: database[pName].id || "GUEST",
-                Date: todayDate,
-                CustomerName: pName,
-                TotalCost: "0.00",
-                AmountPaid: amountPaid.toFixed(2),
-                RemainingBalance: (-amountPaid).toFixed(2)
-            }]
-        })
-    })
-    .then(response => response.json())
-    .then(() => {
-        initApp(); 
-    })
-    .catch(error => {
-        console.error('Error settling tab:', error);
-        status.style.color = "#cf6679";
-        status.innerText = "Error syncing settlement with cloud.";
-    });
-}
         
        function processCustomerAndSync(customerName, costAdd, paymentAdd, currentOwedContext = 0) {
     var status = document.getElementById("statusMessage");
