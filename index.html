@@ -1,1 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ledger Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        input {
+            padding: 8px;
+            margin-right: 10px;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            color: #fff;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #bb86fc;
+            border: none;
+            color: #121212;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #statusMessage {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .person-box {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .person-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        .settle-text {
+            font-size: 0.85em;
+            color: #888;
+        }
+        .line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .line.total {
+            border-top: 1px dashed #444;
+            padding-top: 5px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        #big-total {
+            font-size: 1.5em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Customer Ledger Interface</h2>
+        <div class="form-group">
+            <input type="text" id="input-name" placeholder="Customer Name">
+            <input type="text" id="input-item" placeholder="Item Name">
+            <input type="number" id="input-price" placeholder="Price" step="0.01">
+            <input type="number" id="input-qty" value="1" placeholder="Qty">
+            <button onclick="addItem()">Add Item</button>
+            <button onclick="clearForm()">Clear</button>
+        </div>
+        <div id="statusMessage"></div>
+        
+        <div id="display-area"></div>
+        <div id="big-total">Total: <strong>$0.00</strong></div>
+    </div>
 
+    <script>
+        var database = {};
+        var grandTotal = 0;
+        var monthlyCollected = 0;
+        var sheetDbUrl = "YOUR_SHEETDB_URL_HERE";
+
+        function getTodayDateString() {
+            var d = new Date();
+            var month = '' + (d.getMonth() + 1);
+            var day = '' + d.getDate();
+            var year = d.getFullYear();
+
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+
+            return [year, month, day].join('-');
+        }
+
+        function addItem() {
+            var nameEl = document.getElementById("input-name");
+            var itemEl = document.getElementById("input-item");
+            var priceEl = document.getElementById("input-price");
+            var qtyEl = document.getElementById("input-qty");
+            var status = document.getElementById("statusMessage");
+
+            var name = nameEl.value.trim();
+            var item = itemEl.value.trim();
+            var numPrice = parseFloat(priceEl.value);
+            var numQty = parseInt(qtyEl.value);
+
+            if (!name  !item  isNaN(numPrice) || isNaN(numQty)) {
+                status.style.color = "#cf6679";
+                status.innerText = "Please fill out all fields perfectly.";
+                return;
+            }
+
+            var itemTotalCost = numPrice * numQty;
+
+            if (!database[name]) {
+                database[name] = { id: null, total: 0, items: [] };
+            }
+
+            var displayItemName = item;
+            if (numQty > 1) {
+                displayItemName = item + " (x" + numQty + ")";
+            }
+
+            database[name].items.push({ itemName: displayItemName, itemPrice: itemTotalCost });
+            database[name].total += itemTotalCost;
+            grandTotal += itemTotalCost;
+
+            processCustomerAndSync(name, itemTotalCost, 0);
+            render();
+            
+            itemEl.value = "";
+            priceEl.value = "";
+            qtyEl.value = "1";
+            itemEl.focus();
+        }
+        
+        function processCustomerAndSync(customerName, costAdd, paymentAdd, currentOwedContext = 0) {
+            var status = document.getElementById("statusMessage");
+            status.style.color = "#e0e0e0";
+            status.innerText = "Checking customer profile database...";
+
+            fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(customerName))
+            .then(response => response.json())
+            .then(allHistory => {
+                var assignedId = "GUEST";
+                var recordExistsToday = false;
+                var todayDate = getTodayDateString();
+                var existingRowData = null;
+
+                if (Array.isArray(allHistory) && allHistory.length > 0) {
+                    for(var i = 0; i < allHistory.length; i++) {
+                        if (allHistory[i].ID && allHistory[i].ID !== "GUEST") {
+                            assignedId = allHistory[i].ID;
+                        }
+                        if (allHistory[i].Date === todayDate) {
+                            recordExistsToday = true;
+                            existingRowData = allHistory[i];
+                        }
+                    }
+                } else {
+                    var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
+                    if (!isGuest) {
+                        assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
+                        alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
+                    }
+                }
+
+                if (database[customerName]) {
+                    database[customerName].id = assignedId;
+                }
+
+                if (recordExistsToday && existingRowData) {
+                    var updatedTotalCost = (parseFloat(existingRowData.TotalCost) || 0) + costAdd;
+                    var updatedAmountPaid = (parseFloat(existingRowData.AmountPaid) || 0) + paymentAdd;
+                    var updatedRemainingBalance = updatedTotalCost - updatedAmountPaid;
+
+                    return fetch(sheetDbUrl + "/CustomerName/" + encodeURIComponent(customerName) + "?Date=" + encodeURIComponent(todayDate), {
+                        method: 'PATCH',
+                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            data: {
+                                TotalCost: updatedTotalCost.toFixed(2),
+                                AmountPaid: updatedAmountPaid.toFixed(2),
+                                RemainingBalance: updatedRemainingBalance.toFixed(2)
+                            }
+                        })
+                    });
+                } else {
+                    var startingCost = costAdd > 0 ? costAdd : currentOwedContext;
+                    var remainingBalance = startingCost - paymentAdd;
+
+                    return fetch(sheetDbUrl, {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            data: [{
