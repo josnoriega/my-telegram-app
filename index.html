@@ -382,17 +382,20 @@ function settlePerson(pName) {
             var updatedRemainingBalance = updatedTotalCost - updatedAmountPaid;
 
             // FIX: Match by CustomerName and Date to update the exact same line cleanly
-            return fetch(sheetDbUrl + "/CustomerName/" + encodeURIComponent(customerName) + "?Date=" + encodeURIComponent(todayDate), {
-                method: 'PATCH',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    data: {
-                        TotalCost: updatedTotalCost.toFixed(2),
-                        AmountPaid: updatedAmountPaid.toFixed(2),
-                        RemainingBalance: updatedRemainingBalance.toFixed(2)
-                    }
-                })
-            });
+           return fetch(sheetDbUrl + "/ID/" + encodeURIComponent(existingRowData.ID), {
+  method: 'PATCH',
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    data: {
+      TotalCost: updatedTotalCost.toFixed(2),
+      AmountPaid: updatedAmountPaid.toFixed(2),
+      RemainingBalance: updatedRemainingBalance.toFixed(2)
+    }
+  })
+});
         } else {
             var startingCost = costAdd > 0 ? costAdd : currentOwedContext;
             var remainingBalance = startingCost - paymentAdd;
