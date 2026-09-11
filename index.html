@@ -115,7 +115,25 @@
             <span id="big-total"><strong>$0.00</strong></span>
         </div>
     </div>
-       
+
+    <!-- Settlement Modal UI -->
+    <div id="settleModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index:1000;">
+      <div style="background:#1e1e1e; color:#fff; padding:20px; border-radius:12px; width:320px; text-align:center; border:1px solid #333;">
+        <h3 style="margin-top:0; color:#52a7ff;">Settle Tab</h3>
+        <p id="modalCustomerText" style="font-weight:bold; font-size:16px;">Customer: </p>
+        
+        <label style="display:block; margin-bottom:8px; font-size:13px; color:#b0b0b0;">Payment Amount ($):</label>
+        <input type="number" id="settleAmountInput" step="0.01" style="width:90%; padding:10px; margin-bottom:15px; border-radius:6px; border:1px solid #444; background:#2a2a2a; color:#fff; text-align:center; font-size:16px;" />
+
+        <p style="margin-bottom:10px; font-size:13px; color:#b0b0b0;">Select Payment Method:</p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+          <button onclick="confirmSettlement('Cash')" style="background:#28a745; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; flex:1; font-weight:bold;">💵 Cash</button>
+          <button onclick="confirmSettlement('PayPal')" style="background:#0070ba; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; flex:1; font-weight:bold;">🅿️ PayPal</button>
+        </div>
+        
+        <button onclick="closeSettleModal()" style="background:transparent; color:#cf6679; border:none; margin-top:15px; cursor:pointer; font-weight:bold;">Cancel</button>
+      </div>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
@@ -128,6 +146,7 @@
         var grandTotal = 0;
         var monthlyCollected = 0; 
         var database = {};
+        var currentSettlingCustomer = "";
 
         function getTodayDateString() {
             const d = new Date();
@@ -144,60 +163,57 @@
         };
 
         function initApp() {
-    var status = document.getElementById("statusMessage");
-    status.style.color = "#e0e0e0";
-    status.innerText = "Loading active monthly accounting...";
+            var status = document.getElementById("statusMessage");
+            status.style.color = "#e0e0e0";
+            status.innerText = "Loading active monthly accounting...";
 
-    var currentMonthPrefix = getCurrentMonthString();
+            var currentMonthPrefix = getCurrentMonthString();
 
-    fetch(sheetDbUrl)
-    .then(response => response.json())
-    .then(rows => {
-        if (Array.isArray(rows)) {
-            database = {};
-            grandTotal = 0;
-            monthlyCollected = 0; 
+            fetch(sheetDbUrl)
+            .then(response => response.json())
+            .then(rows => {
+                if (Array.isArray(rows)) {
+                    database = {};
+                    grandTotal = 0;
+                    monthlyCollected = 0; 
 
-            rows.forEach(row => {
-                var name = row.CustomerName;
-                var balanceOwed = parseFloat(row.RemainingBalance) || 0;
-                var amountPaid = parseFloat(row.AmountPaid) || 0;
-                var customerId = row.ID;
-                var rowDate = row.Date || "";
+                    rows.forEach(row => {
+                        var name = row.CustomerName;
+                        var balanceOwed = parseFloat(row.RemainingBalance) || 0;
+                        var amountPaid = parseFloat(row.AmountPaid) || 0;
+                        var customerId = row.ID;
+                        var rowDate = row.Date || "";
 
-                // 1. Backend Accounting: Keep tracking monthly revenue collected
-                if (rowDate.startsWith(currentMonthPrefix)) {
-                    monthlyCollected += amountPaid;
+                        if (rowDate.startsWith(currentMonthPrefix)) {
+                            monthlyCollected += amountPaid;
+                        }
+
+                        if (name && balanceOwed > 0) {
+                            if (database[name]) {
+                                database[name].total += balanceOwed;
+                            } else {
+                                database[name] = {
+                                    id: customerId,
+                                    total: balanceOwed,
+                                    items: [
+                                        { itemName: "📂 Active Balance Owed", itemPrice: balanceOwed }
+                                    ]
+                                };
+                            }
+                            grandTotal += balanceOwed;
+                        }
+                    });
                 }
-
-                // 2. FIXED UI MAPPING: If they owe money, show their card on the front end!
-                if (name && balanceOwed > 0) {
-                    // If the customer already has an entry from a different row today, combine them
-                    if (database[name]) {
-                        database[name].total += balanceOwed;
-                    } else {
-                        database[name] = {
-                            id: customerId,
-                            total: balanceOwed,
-                            items: [
-                                { itemName: "📂 Active Balance Owed", itemPrice: balanceOwed }
-                            ]
-                        };
-                    }
-                    grandTotal += balanceOwed;
-                }
+                status.style.color = "#81c784";
+                status.innerText = "✓ Open Balances Loaded!";
+                render();
+            })
+            .catch(error => {
+                console.error('Initialization Error:', error);
+                status.style.color = "#cf6679";
+                status.innerText = "Failed to pull cloud sync data on startup.";
             });
         }
-        status.style.color = "#81c784";
-        status.innerText = "✓ Open Balances Loaded!";
-        render();
-    })
-    .catch(error => {
-        console.error('Initialization Error:', error);
-        status.style.color = "#cf6679";
-        status.innerText = "Failed to pull cloud sync data on startup.";
-    });
-}
 
         function handleFormSubmit() {
             var nameEl = document.getElementById("input-name");
@@ -241,193 +257,169 @@
             itemEl.focus();
         }
 
+        // Open Modal Handler
         function settlePerson(pName) {
+            currentSettlingCustomer = pName;
             var currentOwed = database[pName].total;
-            
-            var inputPayment = prompt(
-                "👤 Settle Tab: " + pName + "\n" +
-                "Total Balance Pending: $" + currentOwed.toFixed(2) + "\n\n" +
-                "Enter amount paid today:", 
-                currentOwed.toFixed(2)
-            );
+            document.getElementById('modalCustomerText').innerText = "Customer: " + pName;
+            document.getElementById('settleAmountInput').value = currentOwed.toFixed(2);
+            document.getElementById('settleModal').style.display = 'flex';
+        }
 
-            if (inputPayment === null) return; 
-            
-            var amountPaid = parseFloat(inputPayment);
-            if (isNaN(amountPaid) || amountPaid < 0) {
+        function closeSettleModal() {
+            document.getElementById('settleModal').style.display = 'none';
+        }
+
+        // Action when Cash or PayPal button is pressed
+        function confirmSettlement(paymentMethod) {
+            var amountPaid = parseFloat(document.getElementById('settleAmountInput').value);
+            if (isNaN(amountPaid) || amountPaid <= 0) {
                 alert("Please enter a valid numeric value.");
                 return;
             }
 
-            processCustomerAndSync(pName, 0, amountPaid, currentOwed);
+            closeSettleModal();
 
-            grandTotal -= amountPaid;
-            if (typeof monthlyCollected !== 'undefined') {
-                monthlyCollected += amountPaid;
-            }
-            
-            database[pName].total = currentOwed - amountPaid;
+            var pName = currentSettlingCustomer;
+            var status = document.getElementById("statusMessage");
+            status.style.color = "#e0e0e0";
+            status.innerText = "Applying " + paymentMethod + " payment...";
 
-            if (database[pName].total <= 0) {
-                delete database[pName];
-            } else {
-                if (!database[pName].items) database[pName].items = [];
-                database[pName].items.push({ 
-                    itemName: " Paid", 
-                    itemPrice: -amountPaid 
-                });
-            }
+            fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(pName))
+                .then(response => response.json())
+                .then(records => {
+                    if (Array.isArray(records) && records.length > 0) {
+                        var updatePromises = [];
+                        var remainingToPay = amountPaid;
 
-            render();
-        }
-function settlePerson(pName) {
-    var currentOwed = database[pName].total;
-    var inputPayment = prompt("👤 Settle Tab: " + pName + "\n" + "Total Balance Pending: $" + currentOwed.toFixed(2) + "\n\n" + "Enter amount paid today:", currentOwed.toFixed(2));
-    if (inputPayment === null) return;
-    var amountPaid = parseFloat(inputPayment);
-    if (isNaN(amountPaid) || amountPaid < 0) {
-        alert("Please enter a valid numeric value.");
-        return;
-    }
+                        records.forEach(row => {
+                            var remainingBalance = parseFloat(row.RemainingBalance) || 0;
+                            if (remainingBalance > 0 && remainingToPay > 0) {
+                                var paidSoFar = parseFloat(row.AmountPaid) || 0;
+                                var totalCost = parseFloat(row.TotalCost) || 0;
 
-    var status = document.getElementById("statusMessage");
-    status.style.color = "#e0e0e0";
-    status.innerText = "Applying payment to all records...";
+                                var payTowardsThisRow = Math.min(remainingBalance, remainingToPay);
+                                var newPaid = paidSoFar + payTowardsThisRow;
+                                var newBalance = totalCost - newPaid;
 
-    fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(pName))
-        .then(response => response.json())
-        .then(records => {
-            if (Array.isArray(records) && records.length > 0) {
-                var updatePromises = [];
-                var remainingToPay = amountPaid;
+                                remainingToPay -= payTowardsThisRow;
 
-                records.forEach(row => {
-                    var remainingBalance = parseFloat(row.RemainingBalance) || 0;
-                    if (remainingBalance > 0 && remainingToPay > 0) {
-                        var paidSoFar = parseFloat(row.AmountPaid) || 0;
-                        var totalCost = parseFloat(row.TotalCost) || 0;
-
-                        var payTowardsThisRow = Math.min(remainingBalance, remainingToPay);
-                        var newPaid = paidSoFar + payTowardsThisRow;
-                        var newBalance = totalCost - newPaid;
-
-                        remainingToPay -= payTowardsThisRow;
-
-                        var endpoint = sheetDbUrl + "/CustomerName/" + encodeURIComponent(pName) + "?Date=" + encodeURIComponent(row.Date);
-                        
-                        updatePromises.push(
-                            fetch(endpoint, {
-                                method: 'PATCH',
-                                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    data: {
-                                        AmountPaid: newPaid.toFixed(2),
-                                        RemainingBalance: newBalance.toFixed(2)
-                                    }
-                                })
-                            })
-                        );
+                                var endpoint = sheetDbUrl + "/CustomerName/" + encodeURIComponent(pName) + "?Date=" + encodeURIComponent(row.Date);
+                                
+                                updatePromises.push(
+                                    fetch(endpoint, {
+                                        method: 'PATCH',
+                                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            data: {
+                                                AmountPaid: newPaid.toFixed(2),
+                                                RemainingBalance: newBalance.toFixed(2),
+                                                PaymentMethod: paymentMethod // Sends Cash or PayPal
+                                            }
+                                        })
+                                    })
+                                );
+                            }
+                        });
+                        return Promise.all(updatePromises);
                     }
-                });
-                return Promise.all(updatePromises);
-            }
-        })
-        .then(() => {
-            initApp();
-        })
-        .catch(error => {
-            console.error('Error settling customer tabs:', error);
-            status.style.color = "#cf6679";
-            status.innerText = "Error syncing settlement with cloud.";
-        });
-}
-       function processCustomerAndSync(customerName, costAdd, paymentAdd, currentOwedContext = 0) {
-    var status = document.getElementById("statusMessage");
-    status.style.color = "#e0e0e0";
-    status.innerText = "Checking customer profile database...";
-
-    fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(customerName))
-    .then(response => response.json())
-    .then(allHistory => {
-        var assignedId = "GUEST";
-        var recordExistsToday = false;
-        var todayDate = getTodayDateString();
-        var existingRowData = null;
-
-        if (Array.isArray(allHistory) && allHistory.length > 0) {
-            for(var i = 0; i < allHistory.length; i++) {
-                if (allHistory[i].ID && allHistory[i].ID !== "GUEST") {
-                    assignedId = allHistory[i].ID;
-                }
-                if (allHistory[i].Date === todayDate) {
-                    recordExistsToday = true;
-                    existingRowData = allHistory[i];
-                }
-            }
-        } else {
-            var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
-            if (!isGuest) {
-                assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
-                alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
-            }
-        }
-
-        if (database[customerName]) {
-            database[customerName].id = assignedId;
-        }
-
-        if (recordExistsToday && existingRowData) {
-            var updatedTotalCost = (parseFloat(existingRowData.TotalCost) || 0) + costAdd;
-            var updatedAmountPaid = (parseFloat(existingRowData.AmountPaid) || 0) + paymentAdd;
-            var updatedRemainingBalance = updatedTotalCost - updatedAmountPaid;
-
-            // FIX: Match by CustomerName and Date to update the exact same line cleanly
-           return fetch(sheetDbUrl + "/ID/" + encodeURIComponent(existingRowData.ID), {
-  method: 'PATCH',
-  headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    data: {
-      TotalCost: updatedTotalCost.toFixed(2),
-      AmountPaid: updatedAmountPaid.toFixed(2),
-      RemainingBalance: updatedRemainingBalance.toFixed(2)
-    }
-  })
-});
-        } else {
-            var startingCost = costAdd > 0 ? costAdd : currentOwedContext;
-            var remainingBalance = startingCost - paymentAdd;
-
-            return fetch(sheetDbUrl, {
-                method: 'POST',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    data: [{
-                        ID: assignedId,
-                        Date: todayDate,
-                        CustomerName: customerName,
-                        TotalCost: startingCost.toFixed(2),
-                        AmountPaid: paymentAdd.toFixed(2),
-                        RemainingBalance: remainingBalance.toFixed(2)
-                    }]
                 })
+                .then(() => {
+                    initApp();
+                })
+                .catch(error => {
+                    console.error('Error settling customer tabs:', error);
+                    status.style.color = "#cf6679";
+                    status.innerText = "Error syncing settlement with cloud.";
+                });
+        }
+
+        function processCustomerAndSync(customerName, costAdd, paymentAdd, currentOwedContext = 0) {
+            var status = document.getElementById("statusMessage");
+            status.style.color = "#e0e0e0";
+            status.innerText = "Checking customer profile database...";
+
+            fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(customerName))
+            .then(response => response.json())
+            .then(allHistory => {
+                var assignedId = "GUEST";
+                var recordExistsToday = false;
+                var todayDate = getTodayDateString();
+                var existingRowData = null;
+
+                if (Array.isArray(allHistory) && allHistory.length > 0) {
+                    for(var i = 0; i < allHistory.length; i++) {
+                        if (allHistory[i].ID && allHistory[i].ID !== "GUEST") {
+                            assignedId = allHistory[i].ID;
+                        }
+                        if (allHistory[i].Date === todayDate) {
+                            recordExistsToday = true;
+                            existingRowData = allHistory[i];
+                        }
+                    }
+                } else {
+                    var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
+                    if (!isGuest) {
+                        assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
+                        alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
+                    }
+                }
+
+                if (database[customerName]) {
+                    database[customerName].id = assignedId;
+                }
+
+                if (recordExistsToday && existingRowData) {
+                    var updatedTotalCost = (parseFloat(existingRowData.TotalCost) || 0) + costAdd;
+                    var updatedAmountPaid = (parseFloat(existingRowData.AmountPaid) || 0) + paymentAdd;
+                    var updatedRemainingBalance = updatedTotalCost - updatedAmountPaid;
+
+                    return fetch(sheetDbUrl + "/ID/" + encodeURIComponent(existingRowData.ID), {
+                        method: 'PATCH',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            data: {
+                                TotalCost: updatedTotalCost.toFixed(2),
+                                AmountPaid: updatedAmountPaid.toFixed(2),
+                                RemainingBalance: updatedRemainingBalance.toFixed(2)
+                            }
+                        })
+                    });
+                } else {
+                    var startingCost = costAdd > 0 ? costAdd : currentOwedContext;
+                    var remainingBalance = startingCost - paymentAdd;
+
+                    return fetch(sheetDbUrl, {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            data: [{
+                                ID: assignedId,
+                                Date: todayDate,
+                                CustomerName: customerName,
+                                TotalCost: startingCost.toFixed(2),
+                                AmountPaid: paymentAdd.toFixed(2),
+                                RemainingBalance: remainingBalance.toFixed(2)
+                            }]
+                        })
+                    });
+                }
+            })
+            .then(response => response.json())
+            .then(result => {
+                status.style.color = "#81c784";
+                status.innerText = "✓ Ledger Synchronized Engine Match!";
+                render();
+            })
+            .catch(error => {
+                console.error('Error handling customer logging:', error);
+                status.style.color = "#cf6679";
+                status.innerText = "Saved to interface memory. Sync pending.";
             });
         }
-    })
-    .then(response => response.json())
-    .then(result => {
-        status.style.color = "#81c784";
-        status.innerText = "✓ Ledger Synchronized Engine Match!";
-        render();
-    })
-    .catch(error => {
-        console.error('Error handling customer logging:', error);
-        status.style.color = "#cf6679";
-        status.innerText = "Saved to interface memory. Sync pending.";
-    });
-}
 
         function clearForm() {
             document.getElementById("input-name").value = "";
@@ -462,29 +454,7 @@ function settlePerson(pName) {
             }
             
             document.getElementById("big-total").innerHTML = "<strong>$" + Math.max(0, grandTotal).toFixed(2) + "</strong>";
-            
-            console.log("--- BACKEND ACCOUNTING REPORT ---");
-            console.log("Current Month Revenue Collected: $" + Math.max(0, monthlyCollected).toFixed(2));
-            console.log("---------------------------------");
         }
     </script>
-    <!-- Settlement Modal -->
-<div id="settleModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; z-index:1000;">
-  <div style="background:#222; color:#fff; padding:20px; border-radius:8px; width:300px; text-align:center; border:1px solid #444;">
-    <h3 style="margin-top:0;">Settle Tab</h3>
-    <p id="modalCustomerText">Customer: </p>
-    
-    <label style="display:block; margin-bottom:8px;">Payment Amount ($):</label>
-    <input type="number" id="settleAmountInput" step="0.01" style="width:90%; padding:8px; margin-bottom:15px; border-radius:4px; border:1px solid #555; background:#111; color:#fff;" />
-
-    <p style="margin-bottom:10px;">Select Payment Method:</p>
-    <div style="display:flex; gap:10px; justify-content:center;">
-      <button onclick="confirmSettlement('Cash')" style="background:#28a745; color:white; border:none; padding:10px 15px; border-radius:5px; cursor:pointer; flex:1;">💵 Cash</button>
-      <button onclick="confirmSettlement('PayPal')" style="background:#0070ba; color:white; border:none; padding:10px 15px; border-radius:5px; cursor:pointer; flex:1;">🅿️ PayPal</button>
-    </div>
-    
-    <button onclick="closeSettleModal()" style="background:transparent; color:#aaa; border:none; margin-top:15px; cursor:pointer;">Cancel</button>
-  </div>
-</div>
 </body>
 </html>
