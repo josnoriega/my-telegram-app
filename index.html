@@ -271,14 +271,25 @@
         }
 
         // Action when Cash or PayPal button is pressed
-        function confirmSettlement(paymentMethod) {
-            var amountPaid = parseFloat(document.getElementById('settleAmountInput').value);
-            if (isNaN(amountPaid) || amountPaid <= 0) {
-                alert("Please enter a valid numeric value.");
-                return;
-            }
+       function confirmSettlement(paymentMethod) {
+    var amountPaid = parseFloat(document.getElementById('settleAmountInput').value);
+    if (isNaN(amountPaid) || amountPaid <= 0) {
+        alert("Please enter a valid numeric value.");
+        return;
+    }
 
-            closeSettleModal();
+    // Redirect to PayPal if PayPal was selected
+    if (paymentMethod === 'PayPal') {
+        const paypalUrl = "https://paypal.com/us/fundraiser/charity/1215185";
+
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+            Telegram.WebApp.openLink(paypalUrl);
+        } else {
+            window.open(paypalUrl, "_blank");
+        }
+    }
+
+    closeSettleModal();
 
             var pName = currentSettlingCustomer;
             var status = document.getElementById("statusMessage");
