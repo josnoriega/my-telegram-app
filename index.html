@@ -280,14 +280,14 @@
 
     // YOUR PAYPAL LINK GOES HERE:
     if (paymentMethod === 'PayPal') {
-        const paypalUrl = "https://paypal.com/us/fundraiser/charity/1215185" + amountPaid.toFixed(2);
+        const paypalUrl = "https://paypal.com/us/fundraiser/charity/1215185";
         
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
             Telegram.WebApp.openLink(paypalUrl);
         } else {
             window.open(paypalUrl, "_blank");
         }
-    }
+    
 
     closeSettleModal();
     // ... rest of confirmSettlement function
