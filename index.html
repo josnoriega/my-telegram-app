@@ -163,15 +163,31 @@
             <input type="text" id="input-name" placeholder="e.g., John Doe">
         </div>
 
+        <!-- SNACKS & DRINKS DROPDOWN -->
         <div class="form-group">
-            <label for="input-item">Item Ordered</label>
-            <select id="input-item">
-                <option value="" disabled selected>Select an item...</option>
+            <label for="input-snack">Snacks & Drinks</label>
+            <select id="input-snack" onchange="document.getElementById('input-bookstore').selectedIndex = 0;">
+                <option value="" disabled selected>Select a snack/drink...</option>
                 <option value="Soda">Soda</option>
                 <option value="Water">Water</option>
                 <option value="Chips">Chips</option>
                 <option value="Candy Bar">Candy Bar</option>
                 <option value="Coffee">Coffee</option>
+                <option value="Juice">Juice</option>
+            </select>
+        </div>
+
+        <!-- BOOKSTORE ITEMS DROPDOWN -->
+        <div class="form-group">
+            <label for="input-bookstore">Bookstore Items</label>
+            <select id="input-bookstore" onchange="document.getElementById('input-snack').selectedIndex = 0;">
+                <option value="" disabled selected>Select a bookstore item...</option>
+                <option value="Notebook">Notebook</option>
+                <option value="Pen">Pen</option>
+                <option value="Pencil">Pencil</option>
+                <option value="Highlighter">Highlighter</option>
+                <option value="Bookmark">Bookmark</option>
+                <option value="Folder">Folder</option>
             </select>
         </div>
 
@@ -300,19 +316,20 @@
 
         function handleFormSubmit() {
             var nameEl = document.getElementById("input-name");
-            var itemEl = document.getElementById("input-item");
+            var snackEl = document.getElementById("input-snack");
+            var bookstoreEl = document.getElementById("input-bookstore");
             var priceEl = document.getElementById("input-price");
             var qtyEl = document.getElementById("input-qty");
             var status = document.getElementById("statusMessage");
 
             var name = nameEl.value.trim();
-            var item = itemEl.value;
+            var item = snackEl.value || bookstoreEl.value;
             var numPrice = parseFloat(priceEl.value);
             var numQty = parseInt(qtyEl.value);
 
             if (!name || !item || isNaN(numPrice) || isNaN(numQty)) {
                 status.style.color = "#cf6679";
-                status.innerText = "Please fill out all fields perfectly.";
+                status.innerText = "Please select an item and fill out all fields.";
                 return;
             }
 
@@ -342,10 +359,10 @@
             processCustomerAndSync(name, itemTotalCost, 0);
             render();
 
-            itemEl.selectedIndex = 0;
+            snackEl.selectedIndex = 0;
+            bookstoreEl.selectedIndex = 0;
             priceEl.value = "";
             qtyEl.value = "1";
-            itemEl.focus();
         }
 
         function settlePerson(pName) {
@@ -528,7 +545,8 @@
 
         function clearForm() {
             document.getElementById("input-name").value = "";
-            document.getElementById("input-item").selectedIndex = 0;
+            document.getElementById("input-snack").selectedIndex = 0;
+            document.getElementById("input-bookstore").selectedIndex = 0;
             document.getElementById("input-price").value = "";
             document.getElementById("input-qty").value = "1";
             document.getElementById("statusMessage").innerText = "";
