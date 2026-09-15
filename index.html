@@ -7,72 +7,149 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         /* Modern Dark Mode Aesthetics */
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background-color: #121212; 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #121212;
             color: #e0e0e0;
-            padding: 20px; 
-            margin: 0; 
+            padding: 20px;
+            margin: 0;
         }
-        .container { 
-            max-width: 450px; 
-            margin: 0 auto; 
-            background: #1e1e1e; 
-            padding: 20px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
+        .container {
+            max-width: 450px;
+            margin: 0 auto;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             border: 1px solid #2d2d2d;
         }
-        h2 { margin-top: 0; color: #52a7ff; text-align: center; font-size: 20px; }
-        
+        h2 {
+            margin-top: 0;
+            color: #52a7ff;
+            text-align: center;
+            font-size: 20px;
+        }
         /* Form Styling */
-        .form-group { margin-bottom: 14px; }
-        .form-group label { display: block; font-size: 13px; font-weight: bold; color: #b0b0b0; margin-bottom: 5px; }
-        .form-group input { 
-            width: 100%; 
-            padding: 12px; 
-            border: 2px solid #3a3a3a; 
-            border-radius: 8px; 
-            box-sizing: border-box; 
-            font-size: 16px; 
-            background: #2a2a2a; 
-            color: #ffffff; 
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: bold;
+            color: #b0b0b0;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #3a3a3a;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background: #2a2a2a;
+            color: #ffffff;
             transition: border-color 0.2s;
         }
-        .form-group input:focus {
+        .form-group input:focus, .form-group select:focus {
             border-color: #52a7ff;
             outline: none;
         }
-        
         /* Action Buttons */
-        .btn-row { display: flex; gap: 10px; margin-bottom: 20px; }
-        button { border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; transition: background 0.2s; }
-        button.add-btn { flex: 2; padding: 14px; background: #52a7ff; color: #121212; }
-        button.add-btn:hover { background: #3b8eed; }
-        button.clear-btn { flex: 1; padding: 14px; background: #cf6679; color: #121212; }
-        button.clear-btn:hover { background: #b85466; }
-
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 15px;
+            transition: background 0.2s;
+        }
+        button.add-btn {
+            flex: 2;
+            padding: 14px;
+            background: #52a7ff;
+            color: #121212;
+        }
+        button.add-btn:hover {
+            background: #3b8eed;
+        }
+        button.clear-btn {
+            flex: 1;
+            padding: 14px;
+            background: #cf6679;
+            color: #121212;
+        }
+        button.clear-btn:hover {
+            background: #b85466;
+        }
         /* Display Cards */
-        .person-box { 
-            background: #252525; 
-            padding: 14px; 
-            margin-bottom: 12px; 
-            border-left: 4px solid #52a7ff; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            transition: background 0.2s; 
+        .person-box {
+            background: #252525;
+            padding: 14px;
+            margin-bottom: 12px;
+            border-left: 4px solid #52a7ff;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
             border-top: 1px solid #2d2d2d;
             border-right: 1px solid #2d2d2d;
             border-bottom: 1px solid #2d2d2d;
         }
-        .person-box:hover { background: #2d2d2d; }
-        .person-header { margin: 0 0 10px 0; font-size: 16px; color: #ffffff; display: flex; justify-content: space-between; align-items: center; }
-        .settle-text { font-size: 10px; color: #cf6679; font-weight: bold; text-transform: uppercase; background: rgba(207, 102, 121, 0.15); padding: 3px 8px; border-radius: 4px; }
-        .line { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; color: #b0b0b0; }
-        .total { font-weight: bold; border-top: 1px dashed #444; margin-top: 8px; padding-top: 8px; color: #ffffff; }
-        
-        .grand-box { display: flex; justify-content: space-between; font-size: 18px; margin-top: 20px; padding-top: 15px; border-top: 2px solid #444; color: #ffffff; }
-        #statusMessage { text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 14px; min-height: 20px; }
+        .person-box:hover {
+            background: #2d2d2d;
+        }
+        .person-header {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .settle-text {
+            font-size: 10px;
+            color: #cf6679;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: rgba(207, 102, 121, 0.15);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        .line {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 14px;
+            color: #b0b0b0;
+        }
+        .total {
+            font-weight: bold;
+            border-top: 1px dashed #444;
+            margin-top: 8px;
+            padding-top: 8px;
+            color: #ffffff;
+        }
+        .grand-box {
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid #444;
+            color: #ffffff;
+        }
+        #statusMessage {
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 14px;
+            min-height: 20px;
+        }
     </style>
 </head>
 <body>
@@ -80,15 +157,24 @@
     <div class="container">
         <h2>Log Sale / Item</h2>
         <div id="statusMessage"></div>
-        
+
         <div class="form-group">
             <label for="input-name">Customer Name:</label>
             <input type="text" id="input-name" placeholder="e.g., John Doe">
         </div>
+
         <div class="form-group">
-            <label for="input-item">What did they take?</label>
-            <input type="text" id="input-item" placeholder="e.g., Soda">
+            <label for="input-item">Item Ordered</label>
+            <select id="input-item">
+                <option value="" disabled selected>Select an item...</option>
+                <option value="Soda">Soda</option>
+                <option value="Water">Water</option>
+                <option value="Chips">Chips</option>
+                <option value="Candy Bar">Candy Bar</option>
+                <option value="Coffee">Coffee</option>
+            </select>
         </div>
+
         <div style="display: flex; gap: 10px;">
             <div class="form-group" style="flex: 1;">
                 <label for="input-price">Price for ONE ($)</label>
@@ -99,7 +185,7 @@
                 <input type="number" id="input-qty" value="1" min="1">
             </div>
         </div>
-        
+
         <div class="btn-row">
             <button class="add-btn" onclick="handleFormSubmit()">+ Add to Tab</button>
             <button class="clear-btn" onclick="clearForm()">Clear Form</button>
@@ -109,7 +195,7 @@
 
         <h2>Open Tabs (Pending Balances)</h2>
         <div id="display-area"></div>
-        
+
         <div class="grand-box">
             <span><strong>Total Outstanding:</strong></span>
             <span id="big-total"><strong>$0.00</strong></span>
@@ -118,21 +204,18 @@
 
     <!-- Settlement Modal UI -->
     <div id="settleModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index:1000;">
-      <div style="background:#1e1e1e; color:#fff; padding:20px; border-radius:12px; width:320px; text-align:center; border:1px solid #333;">
-        <h3 style="margin-top:0; color:#52a7ff;">Settle Tab</h3>
-        <p id="modalCustomerText" style="font-weight:bold; font-size:16px;">Customer: </p>
-        
-        <label style="display:block; margin-bottom:8px; font-size:13px; color:#b0b0b0;">Payment Amount ($):</label>
-        <input type="number" id="settleAmountInput" step="0.01" style="width:90%; padding:10px; margin-bottom:15px; border-radius:6px; border:1px solid #444; background:#2a2a2a; color:#fff; text-align:center; font-size:16px;" />
-
-        <p style="margin-bottom:10px; font-size:13px; color:#b0b0b0;">Select Payment Method:</p>
-        <div style="display:flex; gap:10px; justify-content:center;">
-          <button onclick="confirmSettlement('Cash')" style="background:#28a745; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; flex:1; font-weight:bold;">💵 Cash</button>
-          <button onclick="confirmSettlement('PayPal')" style="background:#0070ba; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; flex:1; font-weight:bold;">🅿️ PayPal</button>
+        <div style="background:#1e1e1e; color:#fff; padding:20px; border-radius:12px; width:320px; text-align:center; border:1px solid #333;">
+            <h3 style="margin-top:0; color:#52a7ff;">Settle Tab</h3>
+            <p id="modalCustomerText" style="font-weight:bold; font-size:16px;">Customer: </p>
+            <label style="display:block; margin-bottom:8px; font-size:13px; color:#b0b0b0;">Payment Amount ($):</label>
+            <input type="number" id="settleAmountInput" step="0.01" style="width:90%; padding:10px; margin-bottom:15px; border-radius:6px; border:1px solid #444; background:#2a2a2a; color:#fff; text-align:center; font-size:16px;" />
+            <p style="margin-bottom:10px; font-size:13px; color:#b0b0b0;">Select Payment Method:</p>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button onclick="confirmSettlement('Cash')" style="background:#28a745; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; flex:1; font-weight:bold;">💵 Cash</button>
+                <button onclick="confirmSettlement('PayPal')" style="background:#0070ba; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; flex:1; font-weight:bold;">🅿️ PayPal</button>
+            </div>
+            <button onclick="closeSettleModal()" style="background:transparent; color:#cf6679; border:none; margin-top:15px; cursor:pointer; font-weight:bold;">Cancel</button>
         </div>
-        
-        <button onclick="closeSettleModal()" style="background:transparent; color:#cf6679; border:none; margin-top:15px; cursor:pointer; font-weight:bold;">Cancel</button>
-      </div>
     </div>
 
     <script>
@@ -142,9 +225,9 @@
             tg.expand();
         }
 
-        const sheetDbUrl = "https://sheetdb.io/api/v1/imabkvc4hn7d3"; 
+        const sheetDbUrl = "https://sheetdb.io/api/v1/imabkvc4hn7d3";
         var grandTotal = 0;
-        var monthlyCollected = 0; 
+        var monthlyCollected = 0;
         var database = {};
         var currentSettlingCustomer = "";
 
@@ -170,49 +253,49 @@
             var currentMonthPrefix = getCurrentMonthString();
 
             fetch(sheetDbUrl)
-            .then(response => response.json())
-            .then(rows => {
-                if (Array.isArray(rows)) {
-                    database = {};
-                    grandTotal = 0;
-                    monthlyCollected = 0; 
+                .then(response => response.json())
+                .then(rows => {
+                    if (Array.isArray(rows)) {
+                        database = {};
+                        grandTotal = 0;
+                        monthlyCollected = 0;
 
-                    rows.forEach(row => {
-                        var name = row.CustomerName;
-                        var balanceOwed = parseFloat(row.RemainingBalance) || 0;
-                        var amountPaid = parseFloat(row.AmountPaid) || 0;
-                        var customerId = row.ID;
-                        var rowDate = row.Date || "";
+                        rows.forEach(row => {
+                            var name = row.CustomerName;
+                            var balanceOwed = parseFloat(row.RemainingBalance) || 0;
+                            var amountPaid = parseFloat(row.AmountPaid) || 0;
+                            var customerId = row.ID;
+                            var rowDate = row.Date || "";
 
-                        if (rowDate.startsWith(currentMonthPrefix)) {
-                            monthlyCollected += amountPaid;
-                        }
-
-                        if (name && balanceOwed > 0) {
-                            if (database[name]) {
-                                database[name].total += balanceOwed;
-                            } else {
-                                database[name] = {
-                                    id: customerId,
-                                    total: balanceOwed,
-                                    items: [
-                                        { itemName: "📂 Active Balance Owed", itemPrice: balanceOwed }
-                                    ]
-                                };
+                            if (rowDate.startsWith(currentMonthPrefix)) {
+                                monthlyCollected += amountPaid;
                             }
-                            grandTotal += balanceOwed;
-                        }
-                    });
-                }
-                status.style.color = "#81c784";
-                status.innerText = "✓ Open Balances Loaded!";
-                render();
-            })
-            .catch(error => {
-                console.error('Initialization Error:', error);
-                status.style.color = "#cf6679";
-                status.innerText = "Failed to pull cloud sync data on startup.";
-            });
+
+                            if (name && balanceOwed > 0) {
+                                if (database[name]) {
+                                    database[name].total += balanceOwed;
+                                } else {
+                                    database[name] = {
+                                        id: customerId,
+                                        total: balanceOwed,
+                                        items: [
+                                            { itemName: "📂 Active Balance Owed", itemPrice: balanceOwed }
+                                        ]
+                                    };
+                                }
+                                grandTotal += balanceOwed;
+                            }
+                        });
+                    }
+                    status.style.color = "#81c784";
+                    status.innerText = "✓ Open Balances Loaded!";
+                    render();
+                })
+                .catch(error => {
+                    console.error('Initialization Error:', error);
+                    status.style.color = "#cf6679";
+                    status.innerText = "Failed to pull cloud sync data on startup.";
+                });
         }
 
         function handleFormSubmit() {
@@ -223,7 +306,7 @@
             var status = document.getElementById("statusMessage");
 
             var name = nameEl.value.trim();
-            var item = itemEl.value.trim();
+            var item = itemEl.value;
             var numPrice = parseFloat(priceEl.value);
             var numQty = parseInt(qtyEl.value);
 
@@ -236,7 +319,11 @@
             var itemTotalCost = numPrice * numQty;
 
             if (!database[name]) {
-                database[name] = { id: null, total: 0, items: [] };
+                database[name] = {
+                    id: null,
+                    total: 0,
+                    items: []
+                };
             }
 
             var displayItemName = item;
@@ -244,20 +331,23 @@
                 displayItemName = item + " (x" + numQty + ")";
             }
 
-            database[name].items.push({ itemName: displayItemName, itemPrice: itemTotalCost });
+            database[name].items.push({
+                itemName: displayItemName,
+                itemPrice: itemTotalCost
+            });
+
             database[name].total += itemTotalCost;
             grandTotal += itemTotalCost;
 
             processCustomerAndSync(name, itemTotalCost, 0);
             render();
-            
-            itemEl.value = "";
+
+            itemEl.selectedIndex = 0;
             priceEl.value = "";
             qtyEl.value = "1";
             itemEl.focus();
         }
 
-        // Open Modal Handler
         function settlePerson(pName) {
             currentSettlingCustomer = pName;
             var currentOwed = database[pName].total;
@@ -270,26 +360,24 @@
             document.getElementById('settleModal').style.display = 'none';
         }
 
-        // Action when Cash or PayPal button is pressed
-       function confirmSettlement(paymentMethod) {
-    var amountPaid = parseFloat(document.getElementById('settleAmountInput').value);
-    if (isNaN(amountPaid) || amountPaid <= 0) {
-        alert("Please enter a valid numeric value.");
-        return;
-    }
+        function confirmSettlement(paymentMethod) {
+            var amountPaid = parseFloat(document.getElementById('settleAmountInput').value);
 
-    // Redirect to PayPal if PayPal was selected
-    if (paymentMethod === 'PayPal') {
-        const paypalUrl = "https://paypal.com/us/fundraiser/charity/1215185";
+            if (isNaN(amountPaid) || amountPaid <= 0) {
+                alert("Please enter a valid numeric value.");
+                return;
+            }
 
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-            Telegram.WebApp.openLink(paypalUrl);
-        } else {
-            window.open(paypalUrl, "_blank");
-        }
-    }
+            if (paymentMethod === 'PayPal') {
+                const paypalUrl = "https://paypal.com/us/fundraiser/charity/1215185";
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                    Telegram.WebApp.openLink(paypalUrl);
+                } else {
+                    window.open(paypalUrl, "_blank");
+                }
+            }
 
-    closeSettleModal();
+            closeSettleModal();
 
             var pName = currentSettlingCustomer;
             var status = document.getElementById("statusMessage");
@@ -316,22 +404,25 @@
                                 remainingToPay -= payTowardsThisRow;
 
                                 var endpoint = sheetDbUrl + "/CustomerName/" + encodeURIComponent(pName) + "?Date=" + encodeURIComponent(row.Date);
-                                
                                 updatePromises.push(
                                     fetch(endpoint, {
                                         method: 'PATCH',
-                                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                                        headers: {
+                                            'Accept': 'application/json',
+                                            'Content-Type': 'application/json'
+                                        },
                                         body: JSON.stringify({
                                             data: {
                                                 AmountPaid: newPaid.toFixed(2),
                                                 RemainingBalance: newBalance.toFixed(2),
-                                                PaymentMethod: paymentMethod // Sends Cash or PayPal
+                                                PaymentMethod: paymentMethod
                                             }
                                         })
                                     })
                                 );
                             }
                         });
+
                         return Promise.all(updatePromises);
                     }
                 })
@@ -351,90 +442,93 @@
             status.innerText = "Checking customer profile database...";
 
             fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(customerName))
-            .then(response => response.json())
-            .then(allHistory => {
-                var assignedId = "GUEST";
-                var recordExistsToday = false;
-                var todayDate = getTodayDateString();
-                var existingRowData = null;
+                .then(response => response.json())
+                .then(allHistory => {
+                    var assignedId = "GUEST";
+                    var recordExistsToday = false;
+                    var todayDate = getTodayDateString();
+                    var existingRowData = null;
 
-                if (Array.isArray(allHistory) && allHistory.length > 0) {
-                    for(var i = 0; i < allHistory.length; i++) {
-                        if (allHistory[i].ID && allHistory[i].ID !== "GUEST") {
-                            assignedId = allHistory[i].ID;
-                        }
-                        if (allHistory[i].Date === todayDate) {
-                            recordExistsToday = true;
-                            existingRowData = allHistory[i];
-                        }
-                    }
-                } else {
-                    var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
-                    if (!isGuest) {
-                        assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
-                        alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
-                    }
-                }
-
-                if (database[customerName]) {
-                    database[customerName].id = assignedId;
-                }
-
-                if (recordExistsToday && existingRowData) {
-                    var updatedTotalCost = (parseFloat(existingRowData.TotalCost) || 0) + costAdd;
-                    var updatedAmountPaid = (parseFloat(existingRowData.AmountPaid) || 0) + paymentAdd;
-                    var updatedRemainingBalance = updatedTotalCost - updatedAmountPaid;
-
-                    return fetch(sheetDbUrl + "/ID/" + encodeURIComponent(existingRowData.ID), {
-                        method: 'PATCH',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            data: {
-                                TotalCost: updatedTotalCost.toFixed(2),
-                                AmountPaid: updatedAmountPaid.toFixed(2),
-                                RemainingBalance: updatedRemainingBalance.toFixed(2)
+                    if (Array.isArray(allHistory) && allHistory.length > 0) {
+                        for(var i = 0; i < allHistory.length; i++) {
+                            if (allHistory[i].ID && allHistory[i].ID !== "GUEST") {
+                                assignedId = allHistory[i].ID;
                             }
-                        })
-                    });
-                } else {
-                    var startingCost = costAdd > 0 ? costAdd : currentOwedContext;
-                    var remainingBalance = startingCost - paymentAdd;
+                            if (allHistory[i].Date === todayDate) {
+                                recordExistsToday = true;
+                                existingRowData = allHistory[i];
+                            }
+                        }
+                    } else {
+                        var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
+                        if (!isGuest) {
+                            assignedId = "#" + Math.floor(1000 + Math.random() * 9000);
+                            alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
+                        }
+                    }
 
-                    return fetch(sheetDbUrl, {
-                        method: 'POST',
-                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            data: [{
-                                ID: assignedId,
-                                Date: todayDate,
-                                CustomerName: customerName,
-                                TotalCost: startingCost.toFixed(2),
-                                AmountPaid: paymentAdd.toFixed(2),
-                                RemainingBalance: remainingBalance.toFixed(2)
-                            }]
-                        })
-                    });
-                }
-            })
-            .then(response => response.json())
-            .then(result => {
-                status.style.color = "#81c784";
-                status.innerText = "✓ Ledger Synchronized Engine Match!";
-                render();
-            })
-            .catch(error => {
-                console.error('Error handling customer logging:', error);
-                status.style.color = "#cf6679";
-                status.innerText = "Saved to interface memory. Sync pending.";
-            });
+                    if (database[customerName]) {
+                        database[customerName].id = assignedId;
+                    }
+
+                    if (recordExistsToday && existingRowData) {
+                        var updatedTotalCost = (parseFloat(existingRowData.TotalCost) || 0) + costAdd;
+                        var updatedAmountPaid = (parseFloat(existingRowData.AmountPaid) || 0) + paymentAdd;
+                        var updatedRemainingBalance = updatedTotalCost - updatedAmountPaid;
+
+                        return fetch(sheetDbUrl + "/ID/" + encodeURIComponent(existingRowData.ID), {
+                            method: 'PATCH',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                data: {
+                                    TotalCost: updatedTotalCost.toFixed(2),
+                                    AmountPaid: updatedAmountPaid.toFixed(2),
+                                    RemainingBalance: updatedRemainingBalance.toFixed(2)
+                                }
+                            })
+                        });
+                    } else {
+                        var startingCost = costAdd > 0 ? costAdd : currentOwedContext;
+                        var remainingBalance = startingCost - paymentAdd;
+
+                        return fetch(sheetDbUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                data: [{
+                                    ID: assignedId,
+                                    Date: todayDate,
+                                    CustomerName: customerName,
+                                    TotalCost: startingCost.toFixed(2),
+                                    AmountPaid: paymentAdd.toFixed(2),
+                                    RemainingBalance: remainingBalance.toFixed(2)
+                                }]
+                            })
+                        });
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    status.style.color = "#81c784";
+                    status.innerText = "✓ Ledger Synchronized Engine Match!";
+                    render();
+                })
+                .catch(error => {
+                    console.error('Error handling customer logging:', error);
+                    status.style.color = "#cf6679";
+                    status.innerText = "Saved to interface memory. Sync pending.";
+                });
         }
 
         function clearForm() {
             document.getElementById("input-name").value = "";
-            document.getElementById("input-item").value = "";
+            document.getElementById("input-item").selectedIndex = 0;
             document.getElementById("input-price").value = "";
             document.getElementById("input-qty").value = "1";
             document.getElementById("statusMessage").innerText = "";
@@ -448,22 +542,21 @@
                 var box = document.createElement("div");
                 box.className = "person-box";
                 box.setAttribute("ondblclick", "settlePerson('" + pName.replace(/'/g, "\\'") + "')");
-                
+
                 var displayId = database[pName].id ? " [" + database[pName].id + "]" : "";
                 var html = "<div class='person-header'><strong>👤 " + pName + displayId + "</strong><span class='settle-text'>Dbl-Click to Settle</span></div>";
-                
+
                 for (var i = 0; i < database[pName].items.length; i++) {
                     var itm = database[pName].items[i];
                     var formattedPrice = itm.itemPrice < 0 ? "-$" + Math.abs(itm.itemPrice).toFixed(2) : "$" + itm.itemPrice.toFixed(2);
                     html += "<div class='line'><span>• " + itm.itemName + "</span><span>" + formattedPrice + "</span></div>";
                 }
-                
+
                 html += "<div class='line total'><span>Remaining Balance Owed:</span><span>$" + database[pName].total.toFixed(2) + "</span></div>";
-                
                 box.innerHTML = html;
                 area.appendChild(box);
             }
-            
+
             document.getElementById("big-total").innerHTML = "<strong>$" + Math.max(0, grandTotal).toFixed(2) + "</strong>";
         }
     </script>
