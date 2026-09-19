@@ -146,6 +146,7 @@
         var grandTotal = 0;
         var monthlyCollected = 0; 
         var database = {};
+        var allRecords = []; // Cache to fix ID and search issues locally
         var currentSettlingCustomer = "";
 
         function getTodayDateString() {
@@ -173,14 +174,17 @@
             .then(response => response.json())
             .then(rows => {
                 if (Array.isArray(rows)) {
+                    allRecords = rows; // Save locally for fast ID lookups
                     database = {};
                     grandTotal = 0;
                     monthlyCollected = 0; 
 
+                    // Create ledger totals by adding costs and subtracting payments
                     rows.forEach(row => {
                         var name = row.CustomerName;
-                        var balanceOwed = parseFloat(row.RemainingBalance) || 0;
+                        var totalCost = parseFloat(row.TotalCost) || 0;
                         var amountPaid = parseFloat(row.AmountPaid) || 0;
+                        var netOwed = totalCost - amountPaid;
                         var customerId = row.ID;
                         var rowDate = row.Date || "";
 
@@ -188,21 +192,29 @@
                             monthlyCollected += amountPaid;
                         }
 
-                        if (name && balanceOwed > 0) {
-                            if (database[name]) {
-                                database[name].total += balanceOwed;
-                            } else {
-                                database[name] = {
-                                    id: customerId,
-                                    total: balanceOwed,
-                                    items: [
-                                        { itemName: "📂 Active Balance Owed", itemPrice: balanceOwed }
-                                    ]
-                                };
+                        if (name) {
+                            if (!database[name]) {
+                                database[name] = { id: customerId, total: 0, items: [] };
                             }
-                            grandTotal += balanceOwed;
+                            
+                            // Keep the most recent valid ID to avoid generating new ones
+                            if (customerId && customerId !== "GUEST") {
+                                database[name].id = customerId;
+                            }
+                            
+                            database[name].total += netOwed;
                         }
                     });
+
+                    // Clean out zero balances and build display data
+                    for (var pName in database) {
+                        if (database[pName].total > 0.001) { // Floating point safeguard
+                            grandTotal += database[pName].total;
+                            database[pName].items.push({ itemName: "📂 Active Balance Owed", itemPrice: database[pName].total });
+                        } else {
+                            delete database[pName]; // Clears them from the screen once paid
+                        }
+                    }
                 }
                 status.style.color = "#81c784";
                 status.innerText = "✓ Open Balances Loaded!";
@@ -257,7 +269,6 @@
             itemEl.focus();
         }
 
-        // Open Modal Handler
         function settlePerson(pName) {
             currentSettlingCustomer = pName;
             var currentOwed = database[pName].total;
@@ -270,160 +281,107 @@
             document.getElementById('settleModal').style.display = 'none';
         }
 
-        // Action when Cash or PayPal button is pressed
-       function confirmSettlement(paymentMethod) {
-    var amountPaid = parseFloat(document.getElementById('settleAmountInput').value);
-    if (isNaN(amountPaid) || amountPaid <= 0) {
-        alert("Please enter a valid numeric value.");
-        return;
-    }
+        function confirmSettlement(paymentMethod) {
+            var amountPaid = parseFloat(document.getElementById('settleAmountInput').value);
+            if (isNaN(amountPaid) || amountPaid <= 0) {
+                alert("Please enter a valid numeric value.");
+                return;
+            }
 
-    // Redirect to PayPal if PayPal was selected
-    if (paymentMethod === 'PayPal') {
-        const paypalUrl = "https://paypal.com/us/fundraiser/charity/1215185";
+            if (paymentMethod === 'PayPal') {
+                const paypalUrl = "https://paypal.com/us/fundraiser/charity/1215185";
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                    Telegram.WebApp.openLink(paypalUrl);
+                } else {
+                    window.open(paypalUrl, "_blank");
+                }
+            }
 
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-            Telegram.WebApp.openLink(paypalUrl);
-        } else {
-            window.open(paypalUrl, "_blank");
-        }
-    }
-
-    closeSettleModal();
+            closeSettleModal();
 
             var pName = currentSettlingCustomer;
             var status = document.getElementById("statusMessage");
             status.style.color = "#e0e0e0";
             status.innerText = "Applying " + paymentMethod + " payment...";
+            
+            // Gets ID without relying on an external API search
+            var assignedId = (database[pName] && database[pName].id) ? database[pName].id : "GUEST";
+            
+            var payload = {
+                ID: assignedId,
+                Date: getTodayDateString(),
+                CustomerName: pName,
+                TotalCost: "0.00",
+                AmountPaid: amountPaid.toFixed(2),
+                RemainingBalance: (-amountPaid).toFixed(2), // Negative balance offsets the ledger
+                PaymentMethod: paymentMethod
+            };
 
-            fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(pName))
-                .then(response => response.json())
-                .then(records => {
-                    if (Array.isArray(records) && records.length > 0) {
-                        var updatePromises = [];
-                        var remainingToPay = amountPaid;
-
-                        records.forEach(row => {
-                            var remainingBalance = parseFloat(row.RemainingBalance) || 0;
-                            if (remainingBalance > 0 && remainingToPay > 0) {
-                                var paidSoFar = parseFloat(row.AmountPaid) || 0;
-                                var totalCost = parseFloat(row.TotalCost) || 0;
-
-                                var payTowardsThisRow = Math.min(remainingBalance, remainingToPay);
-                                var newPaid = paidSoFar + payTowardsThisRow;
-                                var newBalance = totalCost - newPaid;
-
-                                remainingToPay -= payTowardsThisRow;
-
-                                var endpoint = sheetDbUrl + "/CustomerName/" + encodeURIComponent(pName) + "?Date=" + encodeURIComponent(row.Date);
-                                
-                                updatePromises.push(
-                                    fetch(endpoint, {
-                                        method: 'PATCH',
-                                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            data: {
-                                                AmountPaid: newPaid.toFixed(2),
-                                                RemainingBalance: newBalance.toFixed(2),
-                                                PaymentMethod: paymentMethod // Sends Cash or PayPal
-                                            }
-                                        })
-                                    })
-                                );
-                            }
-                        });
-                        return Promise.all(updatePromises);
-                    }
-                })
-                .then(() => {
-                    initApp();
-                })
-                .catch(error => {
-                    console.error('Error settling customer tabs:', error);
-                    status.style.color = "#cf6679";
-                    status.innerText = "Error syncing settlement with cloud.";
-                });
+            // Posts the settlement as a new row (compatible with standard Google Apps Script)
+            fetch(sheetDbUrl, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: [payload] })
+            })
+            .then(res => res.json())
+            .then(() => {
+                initApp(); // Refreshes everything perfectly from the new ledger
+            })
+            .catch(error => {
+                console.error('Error settling customer tabs:', error);
+                status.style.color = "#cf6679";
+                status.innerText = "Error syncing settlement with cloud.";
+            });
         }
 
-        function processCustomerAndSync(customerName, costAdd, paymentAdd, currentOwedContext = 0) {
+        function processCustomerAndSync(customerName, costAdd, paymentAdd) {
             var status = document.getElementById("statusMessage");
             status.style.color = "#e0e0e0";
-            status.innerText = "Checking customer profile database...";
+            status.innerText = "Syncing with cloud...";
 
-            fetch(sheetDbUrl + "/search?CustomerName=" + encodeURIComponent(customerName))
-            .then(response => response.json())
-            .then(allHistory => {
-                var assignedId = "GUEST";
-                var recordExistsToday = false;
-                var todayDate = getTodayDateString();
-                var existingRowData = null;
-
-                if (Array.isArray(allHistory) && allHistory.length > 0) {
-                    for(var i = 0; i < allHistory.length; i++) {
-                        if (allHistory[i].ID && allHistory[i].ID !== "GUEST") {
-                            assignedId = allHistory[i].ID;
-                        }
-                        if (allHistory[i].Date === todayDate) {
-                            recordExistsToday = true;
-                            existingRowData = allHistory[i];
-                        }
-                    }
-                } else {
-                    var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
-                    if (!isGuest) {
-                        assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
-                        alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
-                    }
+            var assignedId = "GUEST";
+            
+            // Look up ID locally instead of making an API search request
+            var existingRecords = allRecords.filter(r => r.CustomerName && r.CustomerName.toLowerCase() === customerName.toLowerCase());
+            if (existingRecords.length > 0) {
+                var foundIdRecord = existingRecords.find(r => r.ID && r.ID !== "GUEST");
+                if (foundIdRecord) {
+                    assignedId = foundIdRecord.ID;
                 }
-
-                if (database[customerName]) {
-                    database[customerName].id = assignedId;
+            } else {
+                var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
+                if (!isGuest) {
+                    assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
+                    alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
                 }
+            }
 
-                if (recordExistsToday && existingRowData) {
-                    var updatedTotalCost = (parseFloat(existingRowData.TotalCost) || 0) + costAdd;
-                    var updatedAmountPaid = (parseFloat(existingRowData.AmountPaid) || 0) + paymentAdd;
-                    var updatedRemainingBalance = updatedTotalCost - updatedAmountPaid;
+            if (database[customerName]) {
+                database[customerName].id = assignedId;
+            }
 
-                    return fetch(sheetDbUrl + "/ID/" + encodeURIComponent(existingRowData.ID), {
-                        method: 'PATCH',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            data: {
-                                TotalCost: updatedTotalCost.toFixed(2),
-                                AmountPaid: updatedAmountPaid.toFixed(2),
-                                RemainingBalance: updatedRemainingBalance.toFixed(2)
-                            }
-                        })
-                    });
-                } else {
-                    var startingCost = costAdd > 0 ? costAdd : currentOwedContext;
-                    var remainingBalance = startingCost - paymentAdd;
+            var remainingBalance = costAdd - paymentAdd;
+            var payload = {
+                ID: assignedId,
+                Date: getTodayDateString(),
+                CustomerName: customerName,
+                TotalCost: costAdd.toFixed(2),
+                AmountPaid: paymentAdd.toFixed(2),
+                RemainingBalance: remainingBalance.toFixed(2),
+                PaymentMethod: ""
+            };
 
-                    return fetch(sheetDbUrl, {
-                        method: 'POST',
-                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            data: [{
-                                ID: assignedId,
-                                Date: todayDate,
-                                CustomerName: customerName,
-                                TotalCost: startingCost.toFixed(2),
-                                AmountPaid: paymentAdd.toFixed(2),
-                                RemainingBalance: remainingBalance.toFixed(2)
-                            }]
-                        })
-                    });
-                }
+            // Post new transaction row
+            fetch(sheetDbUrl, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: [payload] })
             })
             .then(response => response.json())
             .then(result => {
                 status.style.color = "#81c784";
-                status.innerText = "✓ Ledger Synchronized Engine Match!";
-                render();
+                status.innerText = "✓ Ledger Synchronized!";
+                allRecords.push(payload); // Push to local cache so ID is ready for next add
             })
             .catch(error => {
                 console.error('Error handling customer logging:', error);
