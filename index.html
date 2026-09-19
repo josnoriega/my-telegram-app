@@ -146,7 +146,7 @@
         var grandTotal = 0;
         var monthlyCollected = 0; 
         var database = {};
-        var allRecords = []; // Cache to fix ID and search issues locally
+        var allRecords = []; 
         var currentSettlingCustomer = "";
 
         function getTodayDateString() {
@@ -174,12 +174,11 @@
             .then(response => response.json())
             .then(rows => {
                 if (Array.isArray(rows)) {
-                    allRecords = rows; // Save locally for fast ID lookups
+                    allRecords = rows; 
                     database = {};
                     grandTotal = 0;
                     monthlyCollected = 0; 
 
-                    // Create ledger totals by adding costs and subtracting payments
                     rows.forEach(row => {
                         var name = row.CustomerName;
                         var totalCost = parseFloat(row.TotalCost) || 0;
@@ -196,23 +195,19 @@
                             if (!database[name]) {
                                 database[name] = { id: customerId, total: 0, items: [] };
                             }
-                            
-                            // Keep the most recent valid ID to avoid generating new ones
                             if (customerId && customerId !== "GUEST") {
                                 database[name].id = customerId;
                             }
-                            
                             database[name].total += netOwed;
                         }
                     });
 
-                    // Clean out zero balances and build display data
                     for (var pName in database) {
-                        if (database[pName].total > 0.001) { // Floating point safeguard
+                        if (database[pName].total > 0.001) { 
                             grandTotal += database[pName].total;
                             database[pName].items.push({ itemName: "📂 Active Balance Owed", itemPrice: database[pName].total });
                         } else {
-                            delete database[pName]; // Clears them from the screen once paid
+                            delete database[pName]; 
                         }
                     }
                 }
@@ -304,7 +299,6 @@
             status.style.color = "#e0e0e0";
             status.innerText = "Applying " + paymentMethod + " payment...";
             
-            // Gets ID without relying on an external API search
             var assignedId = (database[pName] && database[pName].id) ? database[pName].id : "GUEST";
             
             var payload = {
@@ -313,24 +307,30 @@
                 CustomerName: pName,
                 TotalCost: "0.00",
                 AmountPaid: amountPaid.toFixed(2),
-                RemainingBalance: (-amountPaid).toFixed(2), // Negative balance offsets the ledger
+                RemainingBalance: (-amountPaid).toFixed(2), 
                 PaymentMethod: paymentMethod
             };
 
-            // Posts the settlement as a new row (compatible with standard Google Apps Script)
+            // OPTIMISTIC UPDATE: Clear the person from the screen immediately so you aren't waiting
+            delete database[pName];
+            render();
+
             fetch(sheetDbUrl, {
                 method: 'POST',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                // Using text/plain stops Google Apps Script from blocking the network request
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ data: [payload] })
             })
-            .then(res => res.json())
+            .then(res => res.text()) // Use text() instead of json() to prevent unseen Javascript crashes
             .then(() => {
-                initApp(); // Refreshes everything perfectly from the new ledger
+                status.style.color = "#81c784";
+                status.innerText = "✓ Settlement saved to cloud!";
+                initApp(); 
             })
             .catch(error => {
                 console.error('Error settling customer tabs:', error);
                 status.style.color = "#cf6679";
-                status.innerText = "Error syncing settlement with cloud.";
+                status.innerText = "Error syncing settlement with cloud. Tab cleared locally.";
             });
         }
 
@@ -341,21 +341,26 @@
 
             var assignedId = "GUEST";
             
-            // Look up ID locally instead of making an API search request
-            var existingRecords = allRecords.filter(r => r.CustomerName && r.CustomerName.toLowerCase() === customerName.toLowerCase());
-            if (existingRecords.length > 0) {
-                var foundIdRecord = existingRecords.find(r => r.ID && r.ID !== "GUEST");
-                if (foundIdRecord) {
-                    assignedId = foundIdRecord.ID;
-                }
+            // Check if we already created an ID in the local memory right now
+            if (database[customerName] && database[customerName].id && database[customerName].id !== "GUEST" && database[customerName].id !== null) {
+                assignedId = database[customerName].id;
             } else {
-                var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
-                if (!isGuest) {
-                    assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
-                    alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
+                var existingRecords = allRecords.filter(r => r.CustomerName && r.CustomerName.toLowerCase() === customerName.toLowerCase());
+                if (existingRecords.length > 0) {
+                    var foundIdRecord = existingRecords.find(r => r.ID && r.ID !== "GUEST");
+                    if (foundIdRecord) {
+                        assignedId = foundIdRecord.ID;
+                    }
+                } else {
+                    var isGuest = confirm("I don't recognize '" + customerName + "'. Is this person a GUEST?\n\n[OK] = Yes, mark as Guest\n[Cancel] = No, register them as a Regular");
+                    if (!isGuest) {
+                        assignedId = "#" + Math.floor(1000 + Math.random() * 9000); 
+                        alert("Registered " + customerName + " as a Regular with Customer ID: " + assignedId);
+                    }
                 }
             }
 
+            // Immediately lock in the ID to the database so the next fast entry uses it
             if (database[customerName]) {
                 database[customerName].id = assignedId;
             }
@@ -371,17 +376,17 @@
                 PaymentMethod: ""
             };
 
-            // Post new transaction row
             fetch(sheetDbUrl, {
                 method: 'POST',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                // Using text/plain stops Google Apps Script from blocking the network request
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ data: [payload] })
             })
-            .then(response => response.json())
+            .then(response => response.text()) // Use text() to prevent Javascript crashes from Apps Script responses
             .then(result => {
                 status.style.color = "#81c784";
                 status.innerText = "✓ Ledger Synchronized!";
-                allRecords.push(payload); // Push to local cache so ID is ready for next add
+                allRecords.push(payload); 
             })
             .catch(error => {
                 console.error('Error handling customer logging:', error);
@@ -401,8 +406,11 @@
         function render() {
             var area = document.getElementById("display-area");
             area.innerHTML = "";
+            grandTotal = 0; // Recalculate accurately
 
             for (var pName in database) {
+                grandTotal += database[pName].total;
+                
                 var box = document.createElement("div");
                 box.className = "person-box";
                 box.setAttribute("ondblclick", "settlePerson('" + pName.replace(/'/g, "\\'") + "')");
